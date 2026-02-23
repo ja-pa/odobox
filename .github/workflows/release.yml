@@ -73,6 +73,13 @@ jobs:
         run: npm ci
         working-directory: frontend
 
+      - name: Prepare CI config.ini
+        shell: bash
+        run: |
+          if [ ! -f config.ini ]; then
+            cp config.ini.example config.ini
+          fi
+
       - name: Build release via Makefile
         shell: bash
         run: |
