@@ -285,7 +285,7 @@ make ocr-test
 Manual run:
 
 ```bash
-./odobox-ocr -input /home/paja/Downloads/aa/input.pdf -lang ces+eng -output /tmp/ocr.txt
+./odobox-ocr -input ./sample-input.pdf -lang ces+eng -output /tmp/ocr.txt
 ```
 
 Implementation calls `/usr/bin/tesseract` directly. For PDF input it first uses `/usr/bin/pdftoppm` to create PNG pages, then runs OCR page by page.

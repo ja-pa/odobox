@@ -7,6 +7,7 @@ TAGS ?= webkit2_41
 FRONTEND_DIR := frontend
 CONFIG_FILE ?= config.ini
 CONFIG_EXAMPLE ?= config.ini.example
+OCR_TEST_INPUT ?= ./sample-input.pdf
 
 .PHONY: help deps bindings dev dev-browser dev-frontend backend-check backend-test frontend-build release release-ci cli cli-run ocr ocr-test config-example clean
 
@@ -25,7 +26,7 @@ help:
 	@echo "  make cli            - Build odobox-cli binary (voicemail + sms inbox)"
 	@echo "  make cli-run        - Run odobox-cli (go run, pass ARGS='...')"
 	@echo "  make ocr            - Build odobox-ocr utility"
-	@echo "  make ocr-test       - Run odobox-ocr on /home/paja/Downloads/aa/input.pdf"
+	@echo "  make ocr-test       - Run odobox-ocr on OCR_TEST_INPUT=$(OCR_TEST_INPUT)"
 	@echo "  make config-example - Generate sanitized config.ini.example"
 	@echo "  make clean          - Remove frontend dist artifacts"
 
@@ -56,7 +57,11 @@ frontend-build:
 
 release: config-example
 	$(WAILS) build -tags "$(TAGS)"
-	$(GO) build -o build/bin/odobox-cli ./cmd/odobox-cli
+	@if [ -d cmd/odobox-cli ]; then \
+		$(GO) build -o build/bin/odobox-cli ./cmd/odobox-cli; \
+	else \
+		$(GO) build -tags "cli" -o build/bin/odobox-cli .; \
+	fi
 	$(GO) build -o build/bin/odobox-ocr ./cmd/odobox-ocr
 	cp -f $(CONFIG_EXAMPLE) build/bin/$(CONFIG_EXAMPLE)
 
@@ -65,21 +70,34 @@ RELEASE_ARCH ?= amd64
 
 release-ci: config-example
 	$(WAILS) build -clean -platform "$(RELEASE_OS)/$(RELEASE_ARCH)" -tags "$(TAGS)"
-	$(GO) build -o build/bin/odobox-cli ./cmd/odobox-cli
+	@if [ -d cmd/odobox-cli ]; then \
+		$(GO) build -o build/bin/odobox-cli ./cmd/odobox-cli; \
+	else \
+		$(GO) build -tags "cli" -o build/bin/odobox-cli .; \
+	fi
 	$(GO) build -o build/bin/odobox-ocr ./cmd/odobox-ocr
 	cp -f $(CONFIG_EXAMPLE) build/bin/$(CONFIG_EXAMPLE)
 
 cli:
-	$(GO) build -o odobox-cli ./cmd/odobox-cli
+	@if [ -d cmd/odobox-cli ]; then \
+		$(GO) build -o odobox-cli ./cmd/odobox-cli; \
+	else \
+		$(GO) build -tags "cli" -o odobox-cli .; \
+	fi
 
 cli-run:
-	$(GO) run ./cmd/odobox-cli $(ARGS)
+	@if [ -d cmd/odobox-cli ]; then \
+		$(GO) run ./cmd/odobox-cli $(ARGS); \
+	else \
+		$(GO) run -tags "cli" . $(ARGS); \
+	fi
 
 ocr:
 	$(GO) build -o odobox-ocr ./cmd/odobox-ocr
 
 ocr-test: ocr
-	./odobox-ocr -input /home/paja/Downloads/aa/input.pdf -lang ces+eng -output /tmp/odobox-ocr-output.txt
+	@test -f "$(OCR_TEST_INPUT)" || (echo "Missing OCR input file: $(OCR_TEST_INPUT)"; exit 1)
+	./odobox-ocr -input "$(OCR_TEST_INPUT)" -lang ces+eng -output /tmp/odobox-ocr-output.txt
 	@echo "OCR output saved to /tmp/odobox-ocr-output.txt"
 
 config-example:

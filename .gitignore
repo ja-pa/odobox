@@ -12,7 +12,7 @@ config.ini
 .env.*
 
 # Local binary output
-OdorikCentral
-odobox-cli
-OdoBox
-odobox-ocr
+/OdorikCentral
+/odobox-cli
+/OdoBox
+/odobox-ocr
