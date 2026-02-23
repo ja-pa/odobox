@@ -1,8 +1,8 @@
 [app]
-db =
-default_transcript_version =
-log =
-poll_interval_minutes =
+db = ./voicemail.db
+default_transcript_version = v2
+log = ./app.log
+poll_interval_minutes = 1
 
 [flask]
 debug =
@@ -10,27 +10,31 @@ host =
 port =
 
 [http_api]
-enabled =
-port =
+enabled = false
+port = 51731
 token =
 
 [imap]
-folder =
-host =
-odorik_pin =
-password =
-poll_interval_minutes =
-port =
-ssl =
-username =
+folder = INBOX
+host = imap.gmail.com
+odorik_pin = 
+password = 
+poll_interval_minutes = 1
+port = 993
+ssl = true
+username = your_email_@gmail.com
 
 [message_cleaner]
-collapse_blank_lines =
-default_transcript_version =
-keep_line_regex =
+collapse_blank_lines = true
+default_transcript_version = v2
+keep_line_regex = ^v\d+:\s*.+$
 remove_regexes =
-version_v1_regex =
-version_v2_regex =
+    ^Prehrana zprava.*$
+    ^--- Přepis hlasové zprávy.*$
+    ^Více informací o přepisu nahrávky na text:$
+    ^https?://\S+$
+version_v1_regex = (?is)(?:^|\n)\s*v1:\s*(?P<content>.*?)(?=\n\s*v2:\s*|\Z)
+version_v2_regex = (?is)(?:^|\n)\s*v2:\s*(?P<content>.*?)(?=\n\s*v1:\s*|\Z)
 
 [odorik]
 account_id =
@@ -41,4 +45,4 @@ sender_id =
 user =
 
 [voicemail_parser]
-caller_phone_regex =
+caller_phone_regex = ^Hlasova zprava\s+(\+?\d+)\s+[-=]+>\s+\d+
