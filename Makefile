@@ -8,7 +8,7 @@ FRONTEND_DIR := frontend
 CONFIG_FILE ?= config.ini
 CONFIG_EXAMPLE ?= config.ini.example
 
-.PHONY: help deps bindings dev dev-browser dev-frontend backend-check backend-test frontend-build release cli cli-run ocr ocr-test config-example clean
+.PHONY: help deps bindings dev dev-browser dev-frontend backend-check backend-test frontend-build release release-ci cli cli-run ocr ocr-test config-example clean
 
 help:
 	@echo "Targets:"
@@ -21,6 +21,7 @@ help:
 	@echo "  make backend-test   - Run backend tests"
 	@echo "  make frontend-build - Production frontend build"
 	@echo "  make release        - Release desktop build + CLI + config example"
+	@echo "  make release-ci     - CI release build for RELEASE_OS/RELEASE_ARCH"
 	@echo "  make cli            - Build odobox-cli binary (voicemail + sms inbox)"
 	@echo "  make cli-run        - Run odobox-cli (go run, pass ARGS='...')"
 	@echo "  make ocr            - Build odobox-ocr utility"
@@ -55,6 +56,15 @@ frontend-build:
 
 release: config-example
 	$(WAILS) build -tags "$(TAGS)"
+	$(GO) build -o build/bin/odobox-cli ./cmd/odobox-cli
+	$(GO) build -o build/bin/odobox-ocr ./cmd/odobox-ocr
+	cp -f $(CONFIG_EXAMPLE) build/bin/$(CONFIG_EXAMPLE)
+
+RELEASE_OS ?= linux
+RELEASE_ARCH ?= amd64
+
+release-ci: config-example
+	$(WAILS) build -clean -platform "$(RELEASE_OS)/$(RELEASE_ARCH)" -tags "$(TAGS)"
 	$(GO) build -o build/bin/odobox-cli ./cmd/odobox-cli
 	$(GO) build -o build/bin/odobox-ocr ./cmd/odobox-ocr
 	cp -f $(CONFIG_EXAMPLE) build/bin/$(CONFIG_EXAMPLE)
