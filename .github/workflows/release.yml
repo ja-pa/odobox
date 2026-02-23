@@ -21,21 +21,25 @@ jobs:
             goarch: amd64
             tags: webkit2_41
             app_binary: OdoBox
-            app_asset: odobox-linux-amd64
+            app_asset: OdoBox
             cli_binary: odobox-cli
-            cli_asset: odobox-cli-linux-amd64
+            cli_asset: odobox-cli
             ocr_binary: odobox-ocr
-            ocr_asset: odobox-ocr-linux-amd64
+            ocr_asset: odobox-ocr
+            package_name: odobox-linux-amd64.tar.gz
+            package_dir: odobox-linux-amd64
           - runner: windows-latest
             goos: windows
             goarch: amd64
             tags: ""
             app_binary: OdoBox.exe
-            app_asset: odobox-windows-amd64.exe
+            app_asset: OdoBox.exe
             cli_binary: odobox-cli.exe
-            cli_asset: odobox-cli-windows-amd64.exe
+            cli_asset: odobox-cli.exe
             ocr_binary: odobox-ocr.exe
-            ocr_asset: odobox-ocr-windows-amd64.exe
+            ocr_asset: odobox-ocr.exe
+            package_name: odobox-windows-amd64.zip
+            package_dir: odobox-windows-amd64
 
     steps:
       - name: Checkout
@@ -88,14 +92,37 @@ jobs:
       - name: Collect release assets
         shell: bash
         run: |
+          mkdir -p artifacts "${{ matrix.package_dir }}"
+          cp "build/bin/${{ matrix.app_binary }}" "${{ matrix.package_dir }}/${{ matrix.app_asset }}"
+          cli_src="build/bin/${{ matrix.cli_binary }}"
+          ocr_src="build/bin/${{ matrix.ocr_binary }}"
+          if [ ! -f "$cli_src" ] && [ -f "${cli_src%.exe}" ]; then
+            cli_src="${cli_src%.exe}"
+          fi
+          if [ ! -f "$ocr_src" ] && [ -f "${ocr_src%.exe}" ]; then
+            ocr_src="${ocr_src%.exe}"
+          fi
+          cp "$cli_src" "${{ matrix.package_dir }}/${{ matrix.cli_asset }}"
+          cp "$ocr_src" "${{ matrix.package_dir }}/${{ matrix.ocr_asset }}"
+          cp "config.ini.example" "${{ matrix.package_dir }}/config.ini.example"
+
+      - name: Create Linux release package
+        if: matrix.goos == 'linux'
+        shell: bash
+        run: |
           mkdir -p artifacts
-          cp "build/bin/${{ matrix.app_binary }}" "artifacts/${{ matrix.app_asset }}"
-          cp "build/bin/${{ matrix.cli_binary }}" "artifacts/${{ matrix.cli_asset }}"
-          cp "build/bin/${{ matrix.ocr_binary }}" "artifacts/${{ matrix.ocr_asset }}"
-          cp "build/bin/config.ini.example" "artifacts/config.ini.example"
+          tar -czf "artifacts/${{ matrix.package_name }}" "${{ matrix.package_dir }}"
+
+      - name: Create Windows release package
+        if: matrix.goos == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          if (Test-Path "artifacts/${{ matrix.package_name }}") { Remove-Item "artifacts/${{ matrix.package_name }}" -Force }
+          Compress-Archive -Path "${{ matrix.package_dir }}/*" -DestinationPath "artifacts/${{ matrix.package_name }}"
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: artifacts/*
+          files: artifacts/${{ matrix.package_name }}

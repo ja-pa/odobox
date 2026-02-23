@@ -55,7 +55,7 @@ backend-test:
 frontend-build:
 	cd $(FRONTEND_DIR) && $(NPM) run build
 
-release: config-example
+release:
 	$(WAILS) build -tags "$(TAGS)"
 	@if [ -d cmd/odobox-cli ]; then \
 		$(GO) build -o build/bin/odobox-cli ./cmd/odobox-cli; \
@@ -63,12 +63,13 @@ release: config-example
 		$(GO) build -tags "cli" -o build/bin/odobox-cli .; \
 	fi
 	$(GO) build -o build/bin/odobox-ocr ./cmd/odobox-ocr
-	cp -f $(CONFIG_EXAMPLE) build/bin/$(CONFIG_EXAMPLE)
+	@test -f "$(CONFIG_EXAMPLE)" || (echo "Missing $(CONFIG_EXAMPLE)"; exit 1)
+	cp -f "$(CONFIG_EXAMPLE)" "build/bin/$(CONFIG_EXAMPLE)"
 
 RELEASE_OS ?= linux
 RELEASE_ARCH ?= amd64
 
-release-ci: config-example
+release-ci:
 	$(WAILS) build -clean -platform "$(RELEASE_OS)/$(RELEASE_ARCH)" -tags "$(TAGS)"
 	@if [ -d cmd/odobox-cli ]; then \
 		$(GO) build -o build/bin/odobox-cli ./cmd/odobox-cli; \
@@ -76,7 +77,8 @@ release-ci: config-example
 		$(GO) build -tags "cli" -o build/bin/odobox-cli .; \
 	fi
 	$(GO) build -o build/bin/odobox-ocr ./cmd/odobox-ocr
-	cp -f $(CONFIG_EXAMPLE) build/bin/$(CONFIG_EXAMPLE)
+	@test -f "$(CONFIG_EXAMPLE)" || (echo "Missing $(CONFIG_EXAMPLE)"; exit 1)
+	cp -f "$(CONFIG_EXAMPLE)" "build/bin/$(CONFIG_EXAMPLE)"
 
 cli:
 	@if [ -d cmd/odobox-cli ]; then \
