@@ -3,12 +3,13 @@ package core
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	"gopkg.in/ini.v1"
 )
 
 func (b *Backend) resolveConfigPath() string {
@@ -30,110 +31,116 @@ func (b *Backend) resolveConfigPath() string {
 
 func (b *Backend) loadConfig() (*appConfig, error) {
 	cfgPath := b.resolveConfigPath()
-	cfg := &appConfig{sections: map[string]map[string]string{}}
-	f, err := os.Open(cfgPath)
-	if err != nil {
+	if _, err := os.Stat(cfgPath); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return cfg, nil
+			return &appConfig{file: ini.Empty()}, nil
 		}
 		return nil, err
 	}
-	defer f.Close()
-
-	data, err := io.ReadAll(f)
+	file, err := ini.LoadSources(ini.LoadOptions{
+		IgnoreInlineComment:        true,
+		AllowPythonMultilineValues: true,
+	}, cfgPath)
 	if err != nil {
 		return nil, err
 	}
-	parseINI(data, cfg)
-	return cfg, nil
+	return &appConfig{file: file}, nil
 }
 
-func parseINI(data []byte, cfg *appConfig) {
-	lines := strings.Split(string(data), "\n")
-	section := ""
-	lastKey := ""
-
-	for _, raw := range lines {
-		line := strings.TrimRight(raw, "\r")
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" || strings.HasPrefix(trimmed, ";") || strings.HasPrefix(trimmed, "#") {
-			continue
-		}
-		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
-			section = strings.ToLower(strings.TrimSpace(trimmed[1 : len(trimmed)-1]))
-			if _, ok := cfg.sections[section]; !ok {
-				cfg.sections[section] = map[string]string{}
-			}
-			lastKey = ""
-			continue
-		}
-		if section == "" {
-			continue
-		}
-		if (strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t")) && lastKey != "" {
-			prev := cfg.sections[section][lastKey]
-			part := strings.TrimSpace(line)
-			if prev == "" {
-				cfg.sections[section][lastKey] = part
-			} else {
-				cfg.sections[section][lastKey] = prev + "\n" + part
-			}
-			continue
-		}
-		k, v, ok := strings.Cut(line, "=")
-		if !ok {
-			continue
-		}
-		key := strings.ToLower(strings.TrimSpace(k))
-		val := strings.TrimSpace(v)
-		cfg.sections[section][key] = val
-		lastKey = key
+func (cfg *appConfig) section(name string) *ini.Section {
+	if cfg.file == nil {
+		cfg.file = ini.Empty()
 	}
+	for _, sec := range cfg.file.Sections() {
+		if strings.EqualFold(sec.Name(), name) {
+			return sec
+		}
+	}
+	return nil
 }
 
-func (cfg *appConfig) section(name string) map[string]string {
-	if sec, ok := cfg.sections[strings.ToLower(name)]; ok {
-		return sec
+func (cfg *appConfig) key(sec *ini.Section, key string) *ini.Key {
+	if sec == nil {
+		return nil
 	}
-	return map[string]string{}
+	for _, k := range sec.Keys() {
+		if strings.EqualFold(k.Name(), key) {
+			return k
+		}
+	}
+	return nil
 }
 
 func (cfg *appConfig) get(section, key, fallback string) string {
 	sec := cfg.section(section)
-	if val, ok := sec[strings.ToLower(key)]; ok {
-		return val
+	if k := cfg.key(sec, key); k != nil {
+		return strings.TrimSpace(k.Value())
 	}
 	return fallback
 }
 
 func (cfg *appConfig) set(section, key, value string) {
-	secName := strings.ToLower(section)
-	if _, ok := cfg.sections[secName]; !ok {
-		cfg.sections[secName] = map[string]string{}
+	sec := cfg.section(section)
+	if sec == nil {
+		if cfg.file == nil {
+			cfg.file = ini.Empty()
+		}
+		var err error
+		sec, err = cfg.file.NewSection(strings.ToLower(strings.TrimSpace(section)))
+		if err != nil {
+			return
+		}
 	}
-	cfg.sections[secName][strings.ToLower(key)] = value
+	existing := cfg.key(sec, key)
+	if existing != nil {
+		existing.SetValue(value)
+		return
+	}
+	if _, err := sec.NewKey(strings.ToLower(strings.TrimSpace(key)), value); err != nil {
+		return
+	}
 }
 
 func (cfg *appConfig) write(path string) error {
 	var out strings.Builder
-	sections := make([]string, 0, len(cfg.sections))
-	for name := range cfg.sections {
-		sections = append(sections, name)
+	sections := make([]string, 0)
+	secMap := map[string]*ini.Section{}
+	if cfg.file == nil {
+		cfg.file = ini.Empty()
+	}
+	for _, sec := range cfg.file.Sections() {
+		name := strings.ToLower(strings.TrimSpace(sec.Name()))
+		if name == "" || strings.EqualFold(name, ini.DefaultSection) {
+			continue
+		}
+		if _, ok := secMap[name]; !ok {
+			secMap[name] = sec
+			sections = append(sections, name)
+		}
 	}
 	sort.Strings(sections)
 
 	for _, section := range sections {
+		sec := secMap[section]
 		out.WriteString("[")
 		out.WriteString(section)
 		out.WriteString("]\n")
 
-		keys := make([]string, 0, len(cfg.sections[section]))
-		for key := range cfg.sections[section] {
-			keys = append(keys, key)
+		keys := make([]string, 0)
+		keyMap := map[string]*ini.Key{}
+		for _, k := range sec.Keys() {
+			name := strings.ToLower(strings.TrimSpace(k.Name()))
+			if name == "" {
+				continue
+			}
+			if _, ok := keyMap[name]; !ok {
+				keyMap[name] = k
+				keys = append(keys, name)
+			}
 		}
 		sort.Strings(keys)
 		for _, key := range keys {
-			value := cfg.sections[section][key]
+			value := strings.TrimSpace(keyMap[key].Value())
 			if strings.Contains(value, "\n") {
 				out.WriteString(key)
 				out.WriteString(" =\n")

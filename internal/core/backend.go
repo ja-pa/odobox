@@ -16,6 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"gopkg.in/ini.v1"
 	_ "modernc.org/sqlite"
 )
 
@@ -28,7 +29,7 @@ const (
 )
 
 type appConfig struct {
-	sections map[string]map[string]string
+	file *ini.File
 }
 
 type imapConfig struct {

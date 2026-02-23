@@ -108,6 +108,15 @@ Wails must build with WebKit 4.1 tag:
 
 Without this tag, builds may fail with `webkit2gtk-4.0` pkg-config errors.
 
+### 4.4 Windows OCR Prerequisites
+
+For OCR features on Windows, install:
+
+- Tesseract OCR:
+  - https://tesseract-ocr.github.io/tessdoc/Installation.html
+- Xpdf command line tools (`pdftoppm`):
+  - https://www.xpdfreader.com/download.html
+
 ## 5. Toolchain and Dependencies
 
 - Go: modern Go toolchain (project currently uses `go 1.24.0` in `go.mod`)
