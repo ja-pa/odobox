@@ -1,0 +1,44 @@
+[app]
+db =
+default_transcript_version =
+log =
+poll_interval_minutes =
+
+[flask]
+debug =
+host =
+port =
+
+[http_api]
+enabled =
+port =
+token =
+
+[imap]
+folder =
+host =
+odorik_pin =
+password =
+poll_interval_minutes =
+port =
+ssl =
+username =
+
+[message_cleaner]
+collapse_blank_lines =
+default_transcript_version =
+keep_line_regex =
+remove_regexes =
+version_v1_regex =
+version_v2_regex =
+
+[odorik]
+account_id =
+api_pin =
+password =
+pin =
+sender_id =
+user =
+
+[voicemail_parser]
+caller_phone_regex =

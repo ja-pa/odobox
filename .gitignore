@@ -1,0 +1,18 @@
+build/bin
+node_modules
+frontend/dist
+
+# Local runtime data / secrets (never commit)
+voicemail.db
+*.db
+*.sqlite
+*.sqlite3
+config.ini
+.env
+.env.*
+
+# Local binary output
+OdorikCentral
+odobox-cli
+OdoBox
+odobox-ocr
