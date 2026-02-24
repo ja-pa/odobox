@@ -1,6 +1,7 @@
 package ocr
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -37,6 +38,32 @@ func NewService() *Service {
 }
 
 var _ core.OCRService = (*Service)(nil)
+
+func (s *Service) ExtractFileText(inputPath string, lang string) (string, error) {
+	inputPath = strings.TrimSpace(inputPath)
+	if inputPath == "" {
+		return "", errors.New("input is required")
+	}
+	if _, err := os.Stat(inputPath); err != nil {
+		return "", fmt.Errorf("cannot access input: %w", err)
+	}
+	if strings.TrimSpace(lang) == "" {
+		lang = "ces+eng"
+	}
+	if _, err := os.Stat(s.tesseractBinary); err != nil {
+		return "", fmt.Errorf("tesseract not found: %w", err)
+	}
+
+	if strings.EqualFold(filepath.Ext(inputPath), ".pdf") {
+		pdfData, err := os.ReadFile(inputPath)
+		if err != nil {
+			return "", err
+		}
+		return s.ExtractPDFText(pdfData, lang)
+	}
+
+	return s.extractImageText(inputPath, lang)
+}
 
 func (s *Service) ExtractPDFText(pdfData []byte, lang string) (string, error) {
 	if len(pdfData) == 0 {
@@ -81,16 +108,24 @@ func (s *Service) ExtractPDFText(pdfData []byte, lang string) (string, error) {
 
 	var out strings.Builder
 	for i, page := range pages {
-		cmd := exec.Command(s.tesseractBinary, page, "stdout", "-l", lang, "--psm", "6")
-		txt, ocrErr := cmd.CombinedOutput()
+		txt, ocrErr := s.extractImageText(page, lang)
 		if ocrErr != nil {
-			return "", fmt.Errorf("tesseract failed on page %d: %w (%s)", i+1, ocrErr, strings.TrimSpace(string(txt)))
+			return "", fmt.Errorf("tesseract failed on page %d: %w", i+1, ocrErr)
 		}
 		if i > 0 {
 			out.WriteString("\n")
 		}
-		out.WriteString(strings.TrimSpace(string(txt)))
+		out.WriteString(strings.TrimSpace(txt))
 		out.WriteString("\n")
 	}
 	return strings.TrimSpace(out.String()), nil
+}
+
+func (s *Service) extractImageText(imagePath string, lang string) (string, error) {
+	cmd := exec.Command(s.tesseractBinary, imagePath, "stdout", "-l", lang, "--psm", "6")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("tesseract image OCR error: %w (%s)", err, strings.TrimSpace(string(out)))
+	}
+	return string(out), nil
 }
