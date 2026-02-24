@@ -2,13 +2,15 @@ package core
 
 import (
 	"fmt"
-	"io"
 	"strings"
 	"time"
-
-	imap "github.com/emersion/go-imap"
-	imapclient "github.com/emersion/go-imap/client"
 )
+
+type defaultOCRService struct{}
+
+func (defaultOCRService) ExtractPDFText(pdfData []byte, lang string) (string, error) {
+	return ocrPDFData(pdfData, lang)
+}
 
 func (b *Backend) sync(days int) (SyncResponse, error) {
 	if days < 1 {
@@ -22,37 +24,42 @@ func (b *Backend) sync(days int) (SyncResponse, error) {
 	if err != nil {
 		return SyncResponse{}, err
 	}
-	db, err := openDB(b.resolveDBPath(cfg))
+
+	if b.mailGatewayFactory == nil {
+		return SyncResponse{}, fmt.Errorf("mail gateway not configured")
+	}
+	if b.syncStoreFactory == nil {
+		return SyncResponse{}, fmt.Errorf("sync store not configured")
+	}
+	ocr := b.ocrService
+	if ocr == nil {
+		ocr = defaultOCRService{}
+	}
+
+	gateway, err := b.mailGatewayFactory.Open(
+		imapCfg.Host,
+		imapCfg.Port,
+		imapCfg.SSL,
+		imapCfg.Username,
+		imapCfg.Password,
+		imapCfg.Folder,
+	)
 	if err != nil {
 		return SyncResponse{}, err
 	}
-	defer db.Close()
-	store := newDBStore(db)
+	defer func() { _ = gateway.Close() }()
 
-	address := fmt.Sprintf("%s:%d", imapCfg.Host, imapCfg.Port)
-	var client *imapclient.Client
-	if imapCfg.SSL {
-		client, err = imapclient.DialTLS(address, nil)
-	} else {
-		client, err = imapclient.Dial(address)
-	}
+	store, err := b.syncStoreFactory.Open(b.resolveDBPath(cfg))
 	if err != nil {
 		return SyncResponse{}, err
 	}
-	defer func() { _ = client.Logout() }()
+	defer func() { _ = store.Close() }()
 
-	if err := client.Login(imapCfg.Username, imapCfg.Password); err != nil {
-		return SyncResponse{}, err
-	}
-	if _, err := client.Select(imapCfg.Folder, false); err != nil {
-		return SyncResponse{}, err
-	}
-
-	vmStored, vmSkipped, err := syncVoicemailInbox(client, store, days)
+	vmStored, vmSkipped, err := syncVoicemailInbox(gateway, store, days)
 	if err != nil {
 		return SyncResponse{}, err
 	}
-	smsStored, smsSkipped, err := syncSMSInbox(client, store, days)
+	smsStored, smsSkipped, err := syncSMSInbox(gateway, store, ocr, days)
 	if err != nil {
 		return SyncResponse{}, err
 	}
@@ -68,13 +75,11 @@ func (b *Backend) sync(days int) (SyncResponse, error) {
 	}, nil
 }
 
-func syncVoicemailInbox(client *imapclient.Client, store *dbStore, days int) (int, int, error) {
-	sinceDate := time.Now().AddDate(0, 0, -days)
-	criteria := imap.NewSearchCriteria()
-	criteria.Header = map[string][]string{"From": {"voicemail@odorik.cz"}}
-	criteria.Since = sinceDate
-
-	uids, err := client.Search(criteria)
+func syncVoicemailInbox(gateway MailGateway, store SyncStore, days int) (int, int, error) {
+	uids, err := gateway.Search(MailSearchCriteria{
+		Since: time.Now().AddDate(0, 0, -days),
+		From:  "voicemail@odorik.cz",
+	})
 	if err != nil {
 		return 0, 0, err
 	}
@@ -82,42 +87,31 @@ func syncVoicemailInbox(client *imapclient.Client, store *dbStore, days int) (in
 		return 0, 0, nil
 	}
 
-	section := &imap.BodySectionName{}
-	items := []imap.FetchItem{imap.FetchUid, imap.FetchEnvelope, section.FetchItem()}
-	seqset := new(imap.SeqSet)
-	seqset.AddNum(uids...)
-	messages := make(chan *imap.Message, 16)
-	fetchErr := make(chan error, 1)
-	go func() { fetchErr <- client.Fetch(seqset, items, messages) }()
+	messages, err := gateway.FetchBodies(uids, false)
+	if err != nil {
+		return 0, 0, err
+	}
 
 	stored := 0
 	skipped := 0
-	seenSet := new(imap.SeqSet)
+	seenUIDs := make([]uint32, 0, len(messages))
 
-	for msg := range messages {
-		if msg == nil {
+	for _, msg := range messages {
+		if len(msg.Raw) == 0 {
 			continue
 		}
-		body := msg.GetBody(section)
-		if body == nil {
-			continue
-		}
-		rawEmail, readErr := io.ReadAll(body)
-		if readErr != nil {
-			continue
-		}
-		parsed, parseErr := parseEmail(rawEmail)
+		parsed, parseErr := parseEmail(msg.Raw)
 		if parseErr != nil {
 			continue
 		}
 		messageID := strings.TrimSpace(parsed.MessageID)
 		if messageID == "" {
-			messageID = fmt.Sprintf("uid-%d", msg.Uid)
+			messageID = fmt.Sprintf("uid-%d", msg.UID)
 		}
-		exists, err := store.voicemailExists(messageID)
+		exists, err := store.VoicemailExists(messageID)
 		if err == nil && exists {
 			skipped++
-			seenSet.AddNum(msg.Uid)
+			seenUIDs = append(seenUIDs, msg.UID)
 			continue
 		}
 		if len(parsed.MP3s) == 0 {
@@ -125,7 +119,7 @@ func syncVoicemailInbox(client *imapclient.Client, store *dbStore, days int) (in
 		}
 		attachment := parsed.MP3s[0]
 		duration := inferDurationFromText(parsed.Subject, parsed.MessageText)
-		if err := store.insertVoicemail(voicemailRecord{
+		if err := store.InsertVoicemail(SyncVoicemailRecord{
 			MessageID:      messageID,
 			Date:           parsed.Date,
 			Subject:        parsed.Subject,
@@ -137,33 +131,25 @@ func syncVoicemailInbox(client *imapclient.Client, store *dbStore, days int) (in
 			continue
 		}
 		stored++
-		seenSet.AddNum(msg.Uid)
+		seenUIDs = append(seenUIDs, msg.UID)
 	}
-	if err := <-fetchErr; err != nil {
-		return 0, 0, err
-	}
-	if len(seenSet.Set) > 0 {
-		if err := client.UidStore(seenSet, imap.FormatFlagsOp(imap.AddFlags, true), []interface{}{imap.SeenFlag}, nil); err != nil {
+	if len(seenUIDs) > 0 {
+		if err := gateway.MarkSeen(seenUIDs); err != nil {
 			return 0, 0, err
 		}
 	}
 	return stored, skipped, nil
 }
 
-func syncSMSInbox(client *imapclient.Client, store *dbStore, days int) (int, int, error) {
-	sinceDate := time.Now().AddDate(0, 0, -days)
-	criteria := imap.NewSearchCriteria()
-	criteria.Since = sinceDate
-
-	uids, err := client.Search(criteria)
+func syncSMSInbox(gateway MailGateway, store SyncStore, ocr OCRService, days int) (int, int, error) {
+	uids, err := gateway.Search(MailSearchCriteria{Since: time.Now().AddDate(0, 0, -days)})
 	if err != nil {
 		return 0, 0, err
 	}
 	if len(uids) == 0 {
 		return 0, 0, nil
 	}
-
-	candidateUIDs, err := findSMSCandidateUIDs(client, uids)
+	candidateUIDs, err := findSMSCandidateUIDs(gateway, uids)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -171,45 +157,34 @@ func syncSMSInbox(client *imapclient.Client, store *dbStore, days int) (int, int
 		return 0, 0, nil
 	}
 
-	section := &imap.BodySectionName{}
-	items := []imap.FetchItem{imap.FetchUid, imap.FetchEnvelope, section.FetchItem()}
-	seqset := new(imap.SeqSet)
-	seqset.AddNum(candidateUIDs...)
-	messages := make(chan *imap.Message, 16)
-	fetchErr := make(chan error, 1)
-	go func() { fetchErr <- client.UidFetch(seqset, items, messages) }()
+	messages, err := gateway.FetchBodies(candidateUIDs, true)
+	if err != nil {
+		return 0, 0, err
+	}
 
 	stored := 0
 	skipped := 0
-	seenSet := new(imap.SeqSet)
+	seenUIDs := make([]uint32, 0, len(messages))
 
-	for msg := range messages {
-		if msg == nil {
+	for _, msg := range messages {
+		if len(msg.Raw) == 0 {
 			continue
 		}
-		body := msg.GetBody(section)
-		if body == nil {
+		if !isSMSInboundMessage(msg.Envelope, msg.Raw) {
 			continue
 		}
-		rawEmail, readErr := io.ReadAll(body)
-		if readErr != nil {
-			continue
-		}
-		if !isSMSInboundMessage(msg, rawEmail) {
-			continue
-		}
-		parsed, parseErr := parseSMSEmail(rawEmail)
+		parsed, parseErr := parseSMSEmail(msg.Raw)
 		if parseErr != nil {
 			continue
 		}
 		messageID := strings.TrimSpace(parsed.MessageID)
 		if messageID == "" {
-			messageID = fmt.Sprintf("uid-%d", msg.Uid)
+			messageID = fmt.Sprintf("uid-%d", msg.UID)
 		}
-		existingID, existingAttachmentText, found, err := store.findSMSByMessageID(messageID)
+		existingID, existingAttachmentText, found, err := store.FindSMSByMessageID(messageID)
 		if err == nil && found && strings.TrimSpace(existingAttachmentText) != "" {
 			skipped++
-			seenSet.AddNum(msg.Uid)
+			seenUIDs = append(seenUIDs, msg.UID)
 			continue
 		}
 		inlineText := strings.TrimSpace(parsed.MessageText)
@@ -220,7 +195,7 @@ func syncSMSInbox(client *imapclient.Client, store *dbStore, days int) (int, int
 			attachment := parsed.PDFs[0]
 			attachmentName = attachment.Name
 			attachmentData = attachment.Data
-			ocrRaw, ocrErr := ocrPDFData(attachment.Data, defaultOCRLanguage)
+			ocrRaw, ocrErr := ocr.ExtractPDFText(attachment.Data, defaultOCRLanguage)
 			if ocrErr == nil && strings.TrimSpace(ocrRaw) != "" {
 				attachmentText = strings.TrimSpace(ocrRaw)
 			}
@@ -234,7 +209,7 @@ func syncSMSInbox(client *imapclient.Client, store *dbStore, days int) (int, int
 		}
 		senderPhone := extractSMSSenderPhone(parsed.Subject, senderText)
 		if found {
-			if err := store.updateSMSMissingData(existingID, smsRecord{
+			if err := store.UpdateSMSMissingData(existingID, SyncSMSRecord{
 				SenderPhone:    senderPhone,
 				MessageText:    inlineText,
 				AttachmentText: attachmentText,
@@ -244,10 +219,10 @@ func syncSMSInbox(client *imapclient.Client, store *dbStore, days int) (int, int
 				continue
 			}
 			stored++
-			seenSet.AddNum(msg.Uid)
+			seenUIDs = append(seenUIDs, msg.UID)
 			continue
 		}
-		if err := store.insertSMS(smsRecord{
+		if err := store.InsertSMS(SyncSMSRecord{
 			MessageID:      messageID,
 			Date:           parsed.Date,
 			Subject:        parsed.Subject,
@@ -260,38 +235,26 @@ func syncSMSInbox(client *imapclient.Client, store *dbStore, days int) (int, int
 			continue
 		}
 		stored++
-		seenSet.AddNum(msg.Uid)
+		seenUIDs = append(seenUIDs, msg.UID)
 	}
-	if err := <-fetchErr; err != nil {
-		return 0, 0, err
-	}
-	if len(seenSet.Set) > 0 {
-		if err := client.UidStore(seenSet, imap.FormatFlagsOp(imap.AddFlags, true), []interface{}{imap.SeenFlag}, nil); err != nil {
+	if len(seenUIDs) > 0 {
+		if err := gateway.MarkSeen(seenUIDs); err != nil {
 			return 0, 0, err
 		}
 	}
 	return stored, skipped, nil
 }
 
-func findSMSCandidateUIDs(client *imapclient.Client, uids []uint32) ([]uint32, error) {
-	seqset := new(imap.SeqSet)
-	seqset.AddNum(uids...)
-	items := []imap.FetchItem{imap.FetchUid, imap.FetchEnvelope}
-	messages := make(chan *imap.Message, 64)
-	fetchErr := make(chan error, 1)
-	go func() { fetchErr <- client.Fetch(seqset, items, messages) }()
-
-	candidates := make([]uint32, 0, len(uids))
-	for msg := range messages {
-		if msg == nil {
-			continue
-		}
-		if isSMSLikeEnvelope(msg.Envelope) {
-			candidates = append(candidates, msg.Uid)
-		}
-	}
-	if err := <-fetchErr; err != nil {
+func findSMSCandidateUIDs(gateway MailGateway, uids []uint32) ([]uint32, error) {
+	messages, err := gateway.FetchEnvelopes(uids)
+	if err != nil {
 		return nil, err
+	}
+	candidates := make([]uint32, 0, len(messages))
+	for _, msg := range messages {
+		if isSMSLikeEnvelope(msg.Envelope) {
+			candidates = append(candidates, msg.UID)
+		}
 	}
 	return candidates, nil
 }

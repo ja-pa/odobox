@@ -5,6 +5,8 @@ import (
 	"log"
 
 	"OdorikCentral/internal/adapters/httpapi"
+	imapadapter "OdorikCentral/internal/adapters/imap"
+	sqliteadapter "OdorikCentral/internal/adapters/sqlite"
 	"OdorikCentral/internal/core"
 )
 
@@ -39,7 +41,10 @@ type App struct {
 }
 
 func NewApp() *App {
-	b := core.NewBackend("")
+	b := core.NewBackendWithDeps("", core.BackendDeps{
+		MailGatewayFactory: imapadapter.NewFactory(),
+		SyncStoreFactory:   sqliteadapter.NewFactory(),
+	})
 	return &App{
 		backend:  b,
 		httpAPIS: httpapi.New(b),

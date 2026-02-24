@@ -275,11 +275,23 @@ type DeleteSMSTemplateResponse struct {
 }
 
 type Backend struct {
-	configPath string
+	configPath         string
+	mailGatewayFactory MailGatewayFactory
+	syncStoreFactory   SyncStoreFactory
+	ocrService         OCRService
 }
 
 func NewBackend(configPath string) *Backend {
 	return &Backend{configPath: configPath}
+}
+
+func NewBackendWithDeps(configPath string, deps BackendDeps) *Backend {
+	return &Backend{
+		configPath:         configPath,
+		mailGatewayFactory: deps.MailGatewayFactory,
+		syncStoreFactory:   deps.SyncStoreFactory,
+		ocrService:         deps.OCRService,
+	}
 }
 
 func normalizeVersion(value string) string {

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	imap "github.com/emersion/go-imap"
-	imapclient "github.com/emersion/go-imap/client"
 	gomail "github.com/emersion/go-message/mail"
 )
 
@@ -29,23 +28,11 @@ func (b *Backend) debugIMAP(days int, limit int) ([]IMAPDebugItem, error) {
 	if err != nil {
 		return nil, err
 	}
-	address := fmt.Sprintf("%s:%d", imapCfg.Host, imapCfg.Port)
-	var client *imapclient.Client
-	if imapCfg.SSL {
-		client, err = imapclient.DialTLS(address, nil)
-	} else {
-		client, err = imapclient.Dial(address)
-	}
+	client, err := openIMAPClient(imapCfg)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = client.Logout() }()
-	if err := client.Login(imapCfg.Username, imapCfg.Password); err != nil {
-		return nil, err
-	}
-	if _, err := client.Select(imapCfg.Folder, false); err != nil {
-		return nil, err
-	}
 
 	criteria := imap.NewSearchCriteria()
 	criteria.Since = time.Now().AddDate(0, 0, -days)
@@ -97,7 +84,7 @@ func (b *Backend) debugIMAP(days int, limit int) ([]IMAPDebugItem, error) {
 			Date:        dateVal,
 			From:        fromStr,
 			Subject:     subject,
-			SMSLike:     isSMSLikeEnvelope(msg.Envelope),
+			SMSLike:     isSMSLikeEnvelope(mailEnvelopeFromIMAP(msg.Envelope)),
 			Voicemail:   strings.Contains(fromStr, "voicemail@odorik.cz"),
 			HasFromHost: odorikHost,
 		}
@@ -108,6 +95,27 @@ func (b *Backend) debugIMAP(days int, limit int) ([]IMAPDebugItem, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].UID > out[j].UID })
 	return out, nil
+}
+
+func mailEnvelopeFromIMAP(env *imap.Envelope) MailEnvelope {
+	if env == nil {
+		return MailEnvelope{}
+	}
+	out := MailEnvelope{
+		Subject: strings.TrimSpace(env.Subject),
+		Date:    env.Date,
+		From:    make([]string, 0, len(env.From)),
+	}
+	for _, from := range env.From {
+		if from == nil {
+			continue
+		}
+		email := strings.ToLower(strings.TrimSpace(from.MailboxName + "@" + from.HostName))
+		if email != "" {
+			out.From = append(out.From, email)
+		}
+	}
+	return out
 }
 
 func (b *Backend) debugIMAPMessage(uid uint32) (IMAPMessageDebug, error) {
@@ -122,23 +130,11 @@ func (b *Backend) debugIMAPMessage(uid uint32) (IMAPMessageDebug, error) {
 	if err != nil {
 		return IMAPMessageDebug{}, err
 	}
-	address := fmt.Sprintf("%s:%d", imapCfg.Host, imapCfg.Port)
-	var client *imapclient.Client
-	if imapCfg.SSL {
-		client, err = imapclient.DialTLS(address, nil)
-	} else {
-		client, err = imapclient.Dial(address)
-	}
+	client, err := openIMAPClient(imapCfg)
 	if err != nil {
 		return IMAPMessageDebug{}, err
 	}
 	defer func() { _ = client.Logout() }()
-	if err := client.Login(imapCfg.Username, imapCfg.Password); err != nil {
-		return IMAPMessageDebug{}, err
-	}
-	if _, err := client.Select(imapCfg.Folder, false); err != nil {
-		return IMAPMessageDebug{}, err
-	}
 
 	seqset := new(imap.SeqSet)
 	seqset.AddNum(uid)

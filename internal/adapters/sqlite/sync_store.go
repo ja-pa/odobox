@@ -1,41 +1,35 @@
-package core
+package sqlite
 
 import (
 	"database/sql"
 	"strings"
-	"time"
+
+	"OdorikCentral/internal/core"
 )
 
-type dbStore struct {
+type Factory struct{}
+
+func NewFactory() *Factory {
+	return &Factory{}
+}
+
+type syncStore struct {
 	db *sql.DB
 }
 
-type voicemailRecord struct {
-	MessageID      string
-	Date           *time.Time
-	Subject        string
-	MessageText    string
-	AttachmentName string
-	AttachmentData []byte
-	AudioDuration  *int
+func (f *Factory) Open(path string) (core.SyncStore, error) {
+	db, err := core.OpenSQLiteDB(path)
+	if err != nil {
+		return nil, err
+	}
+	return &syncStore{db: db}, nil
 }
 
-type smsRecord struct {
-	MessageID      string
-	Date           *time.Time
-	Subject        string
-	SenderPhone    string
-	MessageText    string
-	AttachmentText string
-	AttachmentName string
-	AttachmentData []byte
+func (s *syncStore) Close() error {
+	return s.db.Close()
 }
 
-func newDBStore(db *sql.DB) *dbStore {
-	return &dbStore{db: db}
-}
-
-func (s *dbStore) voicemailExists(messageID string) (bool, error) {
+func (s *syncStore) VoicemailExists(messageID string) (bool, error) {
 	var exists int
 	err := s.db.QueryRow(`SELECT 1 FROM voicemails WHERE message_id = ?`, messageID).Scan(&exists)
 	if err == nil {
@@ -47,7 +41,7 @@ func (s *dbStore) voicemailExists(messageID string) (bool, error) {
 	return false, err
 }
 
-func (s *dbStore) insertVoicemail(rec voicemailRecord) error {
+func (s *syncStore) InsertVoicemail(rec core.SyncVoicemailRecord) error {
 	var dtValue any
 	if rec.Date != nil {
 		dtValue = rec.Date.Format("2006-01-02 15:04:05")
@@ -59,7 +53,7 @@ VALUES (?, ?, ?, ?, 0, ?, ?, ?)
 	return err
 }
 
-func (s *dbStore) findSMSByMessageID(messageID string) (id int, attachmentText string, found bool, err error) {
+func (s *syncStore) FindSMSByMessageID(messageID string) (id int, attachmentText string, found bool, err error) {
 	err = s.db.QueryRow(`SELECT id, COALESCE(attachment_text, '') FROM sms_inbox WHERE message_id = ?`, messageID).Scan(&id, &attachmentText)
 	if err == nil {
 		return id, attachmentText, true, nil
@@ -70,7 +64,7 @@ func (s *dbStore) findSMSByMessageID(messageID string) (id int, attachmentText s
 	return 0, "", false, err
 }
 
-func (s *dbStore) updateSMSMissingData(id int, rec smsRecord) error {
+func (s *syncStore) UpdateSMSMissingData(id int, rec core.SyncSMSRecord) error {
 	_, err := s.db.Exec(`
 UPDATE sms_inbox
 SET sender_phone = ?,
@@ -83,7 +77,7 @@ WHERE id = ?
 	return err
 }
 
-func (s *dbStore) insertSMS(rec smsRecord) error {
+func (s *syncStore) InsertSMS(rec core.SyncSMSRecord) error {
 	var dtValue any
 	if rec.Date != nil {
 		dtValue = rec.Date.Format("2006-01-02 15:04:05")

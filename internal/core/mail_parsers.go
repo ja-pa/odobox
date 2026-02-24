@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	imap "github.com/emersion/go-imap"
 	gomail "github.com/emersion/go-message/mail"
 )
 
@@ -138,8 +137,8 @@ func parseSMSEmail(raw []byte) (parsedSMSEmail, error) {
 	return parsed, nil
 }
 
-func isSMSLikeEnvelope(env *imap.Envelope) bool {
-	if env == nil {
+func isSMSLikeEnvelope(env MailEnvelope) bool {
+	if strings.TrimSpace(env.Subject) == "" && len(env.From) == 0 {
 		return false
 	}
 	subject := strings.ToLower(strings.TrimSpace(env.Subject))
@@ -147,10 +146,7 @@ func isSMSLikeEnvelope(env *imap.Envelope) bool {
 		return true
 	}
 	for _, from := range env.From {
-		if from == nil {
-			continue
-		}
-		email := strings.ToLower(strings.TrimSpace(from.MailboxName + "@" + from.HostName))
+		email := strings.ToLower(strings.TrimSpace(from))
 		if looksLikeSMSSender(email) {
 			return true
 		}
@@ -173,19 +169,14 @@ func looksLikeSMSSender(email string) bool {
 	return re.MatchString(email)
 }
 
-func isSMSInboundMessage(msg *imap.Message, rawEmail []byte) bool {
-	if msg != nil && msg.Envelope != nil {
-		if isSMSLikeEnvelope(msg.Envelope) {
+func isSMSInboundMessage(env MailEnvelope, rawEmail []byte) bool {
+	if isSMSLikeEnvelope(env) {
+		return true
+	}
+	for _, from := range env.From {
+		email := strings.ToLower(strings.TrimSpace(from))
+		if looksLikeSMSSender(email) {
 			return true
-		}
-		for _, addr := range msg.Envelope.From {
-			if addr == nil {
-				continue
-			}
-			email := strings.ToLower(strings.TrimSpace(addr.MailboxName + "@" + addr.HostName))
-			if looksLikeSMSSender(email) {
-				return true
-			}
 		}
 	}
 	parsed, err := stdmail.ReadMessage(bytes.NewReader(rawEmail))

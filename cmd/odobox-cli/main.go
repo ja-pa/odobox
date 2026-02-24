@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	imapadapter "OdorikCentral/internal/adapters/imap"
+	sqliteadapter "OdorikCentral/internal/adapters/sqlite"
 	"OdorikCentral/internal/core"
 )
 
@@ -16,7 +18,10 @@ func main() {
 		os.Exit(2)
 	}
 
-	b := core.NewBackend("")
+	b := core.NewBackendWithDeps("", core.BackendDeps{
+		MailGatewayFactory: imapadapter.NewFactory(),
+		SyncStoreFactory:   sqliteadapter.NewFactory(),
+	})
 	var err error
 
 	switch os.Args[1] {
