@@ -448,7 +448,7 @@ Calendar tab is intentionally removed from active UI. Current primary tabs:
 - In SMS form, selecting `No template` clears the current template-applied message text.
 - SMS form supports manual sender override (`Sender` field). If empty, default sender from settings is used.
 - SMS recipient can be entered manually or selected from Address Book via searchable picker.
-- Settings include `Default SMS identity text` (e.g. `MUDr. Petra Ticha`), automatically prepended to outgoing SMS body as `Identity: message`.
+- Settings include `Default SMS identity text` (e.g. `Reception Desk`), automatically prepended to outgoing SMS body as `Identity: message`.
 - App enforces **single-segment SMS only**:
   - GSM-7: max `160` chars (extension chars count as 2)
   - UCS-2: max `70` chars

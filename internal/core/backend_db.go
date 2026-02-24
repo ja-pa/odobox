@@ -3,6 +3,8 @@ package core
 import (
 	"database/sql"
 	"strings"
+
+	_ "modernc.org/sqlite"
 )
 
 func openDB(path string) (*sql.DB, error) {
