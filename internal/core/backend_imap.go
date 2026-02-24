@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	imap "github.com/emersion/go-imap"
 	gomail "github.com/emersion/go-message/mail"
 )
 
@@ -28,15 +27,23 @@ func (b *Backend) debugIMAP(days int, limit int) ([]IMAPDebugItem, error) {
 	if err != nil {
 		return nil, err
 	}
-	client, err := openIMAPClient(imapCfg)
+	if b.mailGatewayFactory == nil {
+		return nil, fmt.Errorf("mail gateway not configured")
+	}
+	gateway, err := b.mailGatewayFactory.Open(
+		imapCfg.Host,
+		imapCfg.Port,
+		imapCfg.SSL,
+		imapCfg.Username,
+		imapCfg.Password,
+		imapCfg.Folder,
+	)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = client.Logout() }()
+	defer func() { _ = gateway.Close() }()
 
-	criteria := imap.NewSearchCriteria()
-	criteria.Since = time.Now().AddDate(0, 0, -days)
-	uids, err := client.Search(criteria)
+	uids, err := gateway.Search(MailSearchCriteria{Since: time.Now().AddDate(0, 0, -days)})
 	if err != nil {
 		return nil, err
 	}
@@ -47,28 +54,19 @@ func (b *Backend) debugIMAP(days int, limit int) ([]IMAPDebugItem, error) {
 		uids = uids[len(uids)-limit:]
 	}
 
-	seqset := new(imap.SeqSet)
-	seqset.AddNum(uids...)
-	items := []imap.FetchItem{imap.FetchUid, imap.FetchEnvelope}
-	messages := make(chan *imap.Message, 64)
-	fetchErr := make(chan error, 1)
-	go func() { fetchErr <- client.Fetch(seqset, items, messages) }()
+	messages, err := gateway.FetchEnvelopes(uids)
+	if err != nil {
+		return nil, err
+	}
 
 	out := []IMAPDebugItem{}
-	for msg := range messages {
-		if msg == nil || msg.Envelope == nil {
+	for _, msg := range messages {
+		if strings.TrimSpace(msg.Envelope.Subject) == "" && len(msg.Envelope.From) == 0 {
 			continue
 		}
-		fromStr := ""
+		fromStr := strings.TrimSpace(firstEnvelopeFrom(msg.Envelope))
 		odorikHost := false
-		for _, f := range msg.Envelope.From {
-			if f == nil {
-				continue
-			}
-			email := strings.ToLower(strings.TrimSpace(f.MailboxName + "@" + f.HostName))
-			if fromStr == "" {
-				fromStr = email
-			}
+		for _, email := range msg.Envelope.From {
 			if strings.Contains(email, "odorik.cz") {
 				odorikHost = true
 			}
@@ -79,43 +77,19 @@ func (b *Backend) debugIMAP(days int, limit int) ([]IMAPDebugItem, error) {
 			dateVal = msg.Envelope.Date.UTC().Format("2006-01-02 15:04:05")
 		}
 		item := IMAPDebugItem{
-			Seq:         msg.SeqNum,
-			UID:         msg.Uid,
+			Seq:         msg.Seq,
+			UID:         msg.UID,
 			Date:        dateVal,
 			From:        fromStr,
 			Subject:     subject,
-			SMSLike:     isSMSLikeEnvelope(mailEnvelopeFromIMAP(msg.Envelope)),
+			SMSLike:     isSMSLikeEnvelope(msg.Envelope),
 			Voicemail:   strings.Contains(fromStr, "voicemail@odorik.cz"),
 			HasFromHost: odorikHost,
 		}
 		out = append(out, item)
 	}
-	if err := <-fetchErr; err != nil {
-		return nil, err
-	}
 	sort.Slice(out, func(i, j int) bool { return out[i].UID > out[j].UID })
 	return out, nil
-}
-
-func mailEnvelopeFromIMAP(env *imap.Envelope) MailEnvelope {
-	if env == nil {
-		return MailEnvelope{}
-	}
-	out := MailEnvelope{
-		Subject: strings.TrimSpace(env.Subject),
-		Date:    env.Date,
-		From:    make([]string, 0, len(env.From)),
-	}
-	for _, from := range env.From {
-		if from == nil {
-			continue
-		}
-		email := strings.ToLower(strings.TrimSpace(from.MailboxName + "@" + from.HostName))
-		if email != "" {
-			out.From = append(out.From, email)
-		}
-	}
-	return out
 }
 
 func (b *Backend) debugIMAPMessage(uid uint32) (IMAPMessageDebug, error) {
@@ -130,55 +104,47 @@ func (b *Backend) debugIMAPMessage(uid uint32) (IMAPMessageDebug, error) {
 	if err != nil {
 		return IMAPMessageDebug{}, err
 	}
-	client, err := openIMAPClient(imapCfg)
+	if b.mailGatewayFactory == nil {
+		return IMAPMessageDebug{}, fmt.Errorf("mail gateway not configured")
+	}
+	gateway, err := b.mailGatewayFactory.Open(
+		imapCfg.Host,
+		imapCfg.Port,
+		imapCfg.SSL,
+		imapCfg.Username,
+		imapCfg.Password,
+		imapCfg.Folder,
+	)
 	if err != nil {
 		return IMAPMessageDebug{}, err
 	}
-	defer func() { _ = client.Logout() }()
+	defer func() { _ = gateway.Close() }()
 
-	seqset := new(imap.SeqSet)
-	seqset.AddNum(uid)
-	section := &imap.BodySectionName{}
-	items := []imap.FetchItem{imap.FetchUid, imap.FetchEnvelope, section.FetchItem()}
-	messages := make(chan *imap.Message, 1)
-	fetchErr := make(chan error, 1)
-	go func() { fetchErr <- client.Fetch(seqset, items, messages) }()
+	messages, err := gateway.FetchBodies([]uint32{uid}, true)
+	if err != nil {
+		return IMAPMessageDebug{}, err
+	}
 
 	var out IMAPMessageDebug
-	for msg := range messages {
-		if msg == nil {
+	for _, msg := range messages {
+		if msg.UID == 0 {
 			continue
 		}
-		out.Seq = msg.SeqNum
-		out.UID = msg.Uid
-		if msg.Envelope != nil {
-			if !msg.Envelope.Date.IsZero() {
-				out.Date = msg.Envelope.Date.UTC().Format("2006-01-02 15:04:05")
-			}
-			out.Subject = strings.TrimSpace(msg.Envelope.Subject)
-			for _, from := range msg.Envelope.From {
-				if from == nil {
-					continue
-				}
-				email := strings.ToLower(strings.TrimSpace(from.MailboxName + "@" + from.HostName))
-				if out.From == "" {
-					out.From = email
-				}
-			}
+		out.Seq = msg.Seq
+		out.UID = msg.UID
+		if !msg.Envelope.Date.IsZero() {
+			out.Date = msg.Envelope.Date.UTC().Format("2006-01-02 15:04:05")
 		}
-		body := msg.GetBody(section)
-		if body == nil {
+		out.Subject = strings.TrimSpace(msg.Envelope.Subject)
+		out.From = strings.TrimSpace(firstEnvelopeFrom(msg.Envelope))
+		if len(msg.Raw) == 0 {
 			continue
 		}
-		rawEmail, readErr := io.ReadAll(body)
-		if readErr != nil {
-			continue
-		}
-		reader, readMsgErr := gomail.CreateReader(bytes.NewReader(rawEmail))
+		reader, readMsgErr := gomail.CreateReader(bytes.NewReader(msg.Raw))
 		if readMsgErr != nil {
 			continue
 		}
-		smsParsed, smsParseErr := parseSMSEmail(rawEmail)
+		smsParsed, smsParseErr := parseSMSEmail(msg.Raw)
 		if smsParseErr == nil {
 			out.SMSPDFCount = len(smsParsed.PDFs)
 			out.SMSInlineTextLen = len(strings.TrimSpace(smsParsed.MessageText))
@@ -219,11 +185,15 @@ func (b *Backend) debugIMAPMessage(uid uint32) (IMAPMessageDebug, error) {
 			}
 		}
 	}
-	if err := <-fetchErr; err != nil {
-		return IMAPMessageDebug{}, err
-	}
 	if out.UID == 0 {
-		return IMAPMessageDebug{}, fmt.Errorf("sequence %d not found", uid)
+		return IMAPMessageDebug{}, fmt.Errorf("uid %d not found", uid)
 	}
 	return out, nil
+}
+
+func firstEnvelopeFrom(env MailEnvelope) string {
+	if len(env.From) == 0 {
+		return ""
+	}
+	return env.From[0]
 }
