@@ -8,6 +8,7 @@ import {
   updateSMSTemplate,
 } from './smsApi'
 import { listContacts } from '../address_book_page/addressBookApi'
+import { t } from '../../i18n'
 
 function composeMessageWithIdentity(identityText, body) {
   const identity = String(identityText ?? '').trim()
@@ -23,6 +24,7 @@ function SmsPage({
   prefillRecipient = '',
   prefillLabel = '',
   prefillToken = 0,
+  language = 'en',
 }) {
   const [recipient, setRecipient] = useState('')
   const [sender, setSender] = useState(defaultSenderId)
@@ -227,8 +229,8 @@ function SmsPage({
   return (
     <section>
       <header className="section-header">
-        <h2>Send SMS</h2>
-        <p>Send exactly one SMS segment. Longer text is blocked.</p>
+        <h2>{t(language, 'sms_title')}</h2>
+        <p>{t(language, 'sms_subtitle')}</p>
       </header>
 
       <form className="settings-layout" onSubmit={onSubmit}>

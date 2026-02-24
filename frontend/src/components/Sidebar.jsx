@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { t } from '../i18n'
 
 function formatMinutesSince(dateValue, nowValue) {
   const diffMs = Math.max(0, nowValue - dateValue)
@@ -15,6 +16,7 @@ function Sidebar({
   balanceLabel = '',
   isBalanceLoading = false,
   balanceError = '',
+  language = 'en',
 }) {
   const [nowTs, setNowTs] = useState(() => Date.now())
 
@@ -37,28 +39,28 @@ function Sidebar({
           className={`nav-button ${activeTab === 'inbox' ? 'active' : ''}`}
           onClick={() => onTabChange('inbox')}
         >
-          📨 Inbox
+          📨 {t(language, 'sidebar_inbox')}
         </button>
         <button
           type="button"
           className={`nav-button ${activeTab === 'sms' ? 'active' : ''}`}
           onClick={() => onTabChange('sms')}
         >
-          ✉ SMS
+          ✉ {t(language, 'sidebar_sms')}
         </button>
         <button
           type="button"
           className={`nav-button ${activeTab === 'address-book' ? 'active' : ''}`}
           onClick={() => onTabChange('address-book')}
         >
-          📖 Address Book
+          📖 {t(language, 'sidebar_address_book')}
         </button>
         <button
           type="button"
           className={`nav-button ${activeTab === 'help' ? 'active' : ''}`}
           onClick={() => onTabChange('help')}
         >
-          ❓ Help
+          ❓ {t(language, 'sidebar_help')}
         </button>
       </nav>
 
@@ -68,21 +70,23 @@ function Sidebar({
           className={`nav-button secondary-nav-button ${activeTab === 'settings' ? 'active' : ''}`}
           onClick={() => onTabChange('settings')}
         >
-          ⚙ Settings
+          ⚙ {t(language, 'sidebar_settings')}
         </button>
 
         <div className="sidebar-status">
-          <p className="sync-title">⟳ Sync</p>
-          <p className="sync-meta">Last check {lastCheckMinutes} min ago</p>
+          <p className="sync-title">⟳ {t(language, 'sidebar_sync')}</p>
+          <p className="sync-meta">{t(language, 'sidebar_last_check', { minutes: lastCheckMinutes })}</p>
           <p className="sync-meta">
-            Credit{' '}
-            {isBalanceLoading
-              ? 'loading...'
-              : balanceLabel || (balanceError ? 'unavailable' : '--')}
+            {t(language, 'sidebar_credit', {
+              value:
+                isBalanceLoading
+                  ? t(language, 'sidebar_credit_loading')
+                  : balanceLabel || (balanceError ? t(language, 'sidebar_credit_unavailable') : '--'),
+            })}
           </p>
-          <p className="sync-meta">● {connected ? 'Connected' : 'Error'}</p>
+          <p className="sync-meta">● {connected ? t(language, 'sidebar_connected') : t(language, 'sidebar_error')}</p>
           <button type="button" className="sync-link" onClick={onResync} disabled={isSyncing}>
-            {isSyncing ? 'Resyncing...' : 'Resync now'}
+            {isSyncing ? t(language, 'sidebar_resyncing') : t(language, 'sidebar_resync')}
           </button>
         </div>
       </section>

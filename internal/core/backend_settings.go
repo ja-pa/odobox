@@ -59,6 +59,7 @@ func (b *Backend) getSettings() (SettingsResponse, error) {
 			"poll_interval_minutes":      pollValue,
 			"default_transcript_version": cfg.get("app", "default_transcript_version", "both"),
 			"sms_identity_text":          cfg.get("app", "sms_identity_text", ""),
+			"ui_language":                cfg.get("app", "ui_language", "en"),
 		},
 		"odorik": {
 			"pin":        cfg.get("odorik", "pin", ""),
@@ -83,7 +84,7 @@ func (b *Backend) patchSettings(req PatchSettingsRequest) (PatchSettingsResponse
 	}
 	editable := map[string]bool{"imap": true, "message_cleaner": true, "voicemail_parser": true, "sms_parser": true, "app": true, "odorik": true}
 	restricted := map[string]map[string]bool{
-		"app": {"poll_interval_minutes": true, "default_transcript_version": true, "sms_identity_text": true},
+		"app": {"poll_interval_minutes": true, "default_transcript_version": true, "sms_identity_text": true, "ui_language": true},
 		"odorik": {
 			"pin": true, "user": true, "password": true, "sender_id": true,
 			"account_id": true, "api_pin": true,
@@ -137,6 +138,10 @@ func (b *Backend) patchSettings(req PatchSettingsRequest) (PatchSettingsResponse
 	smsIdentityText := strings.TrimSpace(cfg.get("app", "sms_identity_text", ""))
 	if len([]rune(smsIdentityText)) > 80 {
 		return PatchSettingsResponse{}, fmt.Errorf("app.sms_identity_text must be at most 80 characters")
+	}
+	uiLanguage := strings.ToLower(strings.TrimSpace(cfg.get("app", "ui_language", "en")))
+	if uiLanguage != "en" && uiLanguage != "cs" {
+		return PatchSettingsResponse{}, fmt.Errorf("app.ui_language must be one of: en,cs")
 	}
 
 	cfgPath := b.resolveConfigPath()

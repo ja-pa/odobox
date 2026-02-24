@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { getErrorMessage } from '../../errorUtils'
 import { updateContact } from '../address_book_page/addressBookApi'
+import { t } from '../../i18n'
 import CheckedItemsSection from './components/CheckedItemsSection'
 import ContactModal from './components/ContactModal'
 import MessageList from './components/MessageList'
@@ -13,7 +14,7 @@ const FILTER_LABELS = {
   all: 'All time',
 }
 
-function InboxPage({ inboxState, onSendSMSContact }) {
+function InboxPage({ inboxState, onSendSMSContact, language = 'en' }) {
   const {
     resolvedMessages,
     resolvedSMSMessages,
@@ -90,15 +91,15 @@ function InboxPage({ inboxState, onSendSMSContact }) {
   return (
     <section>
       <header className="section-header">
-        <h2>Inbox</h2>
-        <p>Resolve each call entry to keep a zero inbox.</p>
+        <h2>{t(language, 'inbox_title')}</h2>
+        <p>{t(language, 'inbox_subtitle')}</p>
         <button
           type="button"
           className="show-checked-button"
           disabled={totalChecked === 0}
           onClick={() => setShowCheckedItems((prev) => !prev)}
         >
-          {showCheckedItems ? 'Hide checked items' : 'Show checked items'}
+          {showCheckedItems ? t(language, 'inbox_hide_checked') : t(language, 'inbox_show_checked')}
           {totalChecked > 0 ? ` (${totalChecked})` : ''}
         </button>
         <div className="time-filter-list" role="tablist" aria-label="Message time filter">
@@ -118,11 +119,11 @@ function InboxPage({ inboxState, onSendSMSContact }) {
       </header>
 
       {isLoading ? (
-        <div className="empty-state">Loading messages...</div>
+        <div className="empty-state">{t(language, 'inbox_loading')}</div>
       ) : errorMessage ? (
         <div className="empty-state inbox-error">{errorMessage}</div>
       ) : filteredVisibleMessages.length === 0 && filteredVisibleSMSMessages.length === 0 ? (
-        <div className="empty-state">All caught up! Your inbox is empty.</div>
+        <div className="empty-state">{t(language, 'inbox_empty')}</div>
       ) : (
         <>
           {filteredVisibleMessages.length > 0 ? (
@@ -138,7 +139,7 @@ function InboxPage({ inboxState, onSendSMSContact }) {
           ) : null}
           {filteredVisibleSMSMessages.length > 0 ? (
             <section className="sms-inbox-section">
-              <h3>SMS Inbox</h3>
+              <h3>{t(language, 'inbox_sms_section')}</h3>
               <MessageList
                 messages={filteredVisibleSMSMessages}
                 expandedIds={expandedSMSIds}
@@ -160,17 +161,19 @@ function InboxPage({ inboxState, onSendSMSContact }) {
           onUncheck={handleUnresolve}
           onOpenContact={openContact}
           onSendSMS={onSendSMSContact}
+          language={language}
         />
       ) : null}
       {showCheckedItems && resolvedSMSMessages.length > 0 ? (
         <section className="sms-inbox-section">
-          <h3>Checked SMS</h3>
+          <h3>{t(language, 'inbox_checked_sms')}</h3>
           <CheckedItemsSection
             items={resolvedSMSMessages}
             onUncheck={handleUnresolveSMS}
             onOpenContact={openContact}
             onSendSMS={onSendSMSContact}
             showAudio={false}
+            language={language}
           />
         </section>
       ) : null}
@@ -182,6 +185,7 @@ function InboxPage({ inboxState, onSendSMSContact }) {
         errorMessage={contactErrorMessage}
         onClose={closeContact}
         onSave={saveContact}
+        language={language}
       />
     </section>
   )

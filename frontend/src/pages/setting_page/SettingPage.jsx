@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { DEFAULT_SETTINGS } from '../../settingsApi'
 import { exportVCF, importVCF } from '../address_book_page/addressBookApi'
+import { t } from '../../i18n'
 
 function SettingPage({
   initialSettings = DEFAULT_SETTINGS,
@@ -8,6 +9,7 @@ function SettingPage({
   errorMessage = '',
   onSaveSettings,
   onReloadSettings,
+  language = 'en',
 }) {
   const [settings, setSettings] = useState(initialSettings)
   const [saveMessage, setSaveMessage] = useState('')
@@ -125,11 +127,29 @@ function SettingPage({
   return (
     <section>
       <header className="section-header">
-        <h2>Settings</h2>
-        <p>Configure API-backed IMAP, transcript cleaning and parser behavior.</p>
+        <h2>{t(language, 'settings_title')}</h2>
+        <p>{t(language, 'settings_subtitle')}</p>
       </header>
 
       <form className="settings-layout" onSubmit={handleSave}>
+        <section className="settings-card">
+          <h3>{t(language, 'settings_ui_language')}</h3>
+          <label className="form-field">
+            <span>{t(language, 'settings_ui_language')}</span>
+            <select
+              value={settings.uiLanguage ?? 'en'}
+              onChange={(event) =>
+                setSettings((prev) => ({ ...prev, uiLanguage: event.target.value }))
+              }
+              disabled={isLoading || isSaving}
+            >
+              <option value="en">{t(language, 'settings_language_en')}</option>
+              <option value="cs">{t(language, 'settings_language_cs')}</option>
+            </select>
+          </label>
+          <p className="help-note">{t(language, 'settings_ui_language_note')}</p>
+        </section>
+
         <section className="settings-card">
           <h3>IMAP Settings</h3>
           <div className="settings-grid">
@@ -199,7 +219,7 @@ function SettingPage({
             <span>Odorik API User</span>
             <input
               type="text"
-              placeholder="e.g. 7089454"
+              placeholder="e.g. 7012345"
               value={settings.odorik.user}
               onChange={(event) =>
                 setSettings((prev) => ({

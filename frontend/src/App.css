@@ -657,6 +657,18 @@
   margin-top: 1.2rem;
 }
 
+.help-lang-switch {
+  margin-top: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.help-lang-switch span {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
 .help-steps,
 .help-list {
   margin: 0;
@@ -683,6 +695,97 @@
   border-radius: 0.3rem;
   padding: 0.05rem 0.3rem;
   font-size: 0.82rem;
+}
+
+.help-image-grid {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.65rem;
+}
+
+.help-image-link {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  overflow: hidden;
+  padding: 0;
+  background: #ffffff;
+  cursor: zoom-in;
+  min-height: 180px;
+  height: 220px;
+}
+
+.help-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #ffffff;
+  object-fit: contain;
+}
+
+.help-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(18, 24, 33, 0.72);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.help-lightbox-card {
+  width: min(1200px, 96vw);
+  max-height: 96vh;
+  background: #ffffff;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border);
+  padding: 0.65rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.help-lightbox-close {
+  justify-self: end;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  border-radius: 0.45rem;
+  padding: 0.35rem 0.6rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.help-lightbox-image {
+  width: 100%;
+  height: auto;
+  max-height: calc(96vh - 80px);
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+}
+
+.help-summary-table {
+  margin-top: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  overflow: hidden;
+}
+
+.help-summary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border-top: 1px solid var(--border);
+}
+
+.help-summary-row:first-child {
+  border-top: 0;
+}
+
+.help-summary-head {
+  background: #f6f8fc;
 }
 
 @media (max-width: 1020px) {

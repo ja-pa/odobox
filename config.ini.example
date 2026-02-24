@@ -3,6 +3,7 @@ db = ./voicemail.db
 default_transcript_version = v2
 log = ./app.log
 poll_interval_minutes = 1
+ui_language = en
 
 [flask]
 debug =

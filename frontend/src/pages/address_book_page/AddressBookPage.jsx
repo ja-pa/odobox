@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createContact, deleteContact, listContacts } from './addressBookApi'
+import { t } from '../../i18n'
 
 const EMPTY_FORM = {
   full_name: '',
@@ -9,7 +10,7 @@ const EMPTY_FORM = {
   note: '',
 }
 
-function AddressBookPage({ onSendSMSContact }) {
+function AddressBookPage({ onSendSMSContact, language = 'en' }) {
   const [contacts, setContacts] = useState([])
   const [form, setForm] = useState(EMPTY_FORM)
   const [isLoading, setIsLoading] = useState(true)
@@ -79,8 +80,8 @@ function AddressBookPage({ onSendSMSContact }) {
   return (
     <section>
       <header className="section-header">
-        <h2>Address Book</h2>
-        <p>Add contacts manually here. VCF import/export is in Settings.</p>
+        <h2>{t(language, 'address_book_title')}</h2>
+        <p>{t(language, 'address_book_subtitle')}</p>
       </header>
 
       <div className="settings-layout">

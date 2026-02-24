@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { t } from '../../../i18n'
 
 const EMPTY_FORM = {
   full_name: '',
@@ -26,6 +27,7 @@ function ContactModal({
   statusMessage = '',
   onClose,
   onSave,
+  language = 'en',
 }) {
   const contact = message?.contact ?? null
   const [form, setForm] = useState(() => toForm(contact))
@@ -51,9 +53,9 @@ function ContactModal({
         onClick={(event) => event.stopPropagation()}
       >
         <header className="contact-modal-header">
-          <h3>Caller Contact</h3>
+          <h3>{t(language, 'contact_modal_title')}</h3>
           <button type="button" className="action-secondary" onClick={onClose} disabled={isSaving}>
-            Close
+            {t(language, 'common_close')}
           </button>
         </header>
 
@@ -114,7 +116,7 @@ function ContactModal({
 
           <div className="settings-actions">
             <button type="submit" className="action-primary" disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save changes'}
+              {isSaving ? t(language, 'common_saving') : t(language, 'common_save_changes')}
             </button>
             {statusMessage ? <span className="save-message">{statusMessage}</span> : null}
             {errorMessage ? <span className="save-message template-error">{errorMessage}</span> : null}

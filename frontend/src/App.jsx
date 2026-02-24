@@ -9,6 +9,7 @@ import SettingPage from './pages/setting_page/SettingPage'
 import { DEFAULT_SETTINGS, fetchSettingsFromApi, saveSettingsToApi } from './settingsApi'
 import { getErrorMessage } from './errorUtils'
 import { fetchOdorikBalance } from './balanceApi'
+import { normalizeLanguage } from './i18n'
 import './App.css'
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
   const [balanceLabel, setBalanceLabel] = useState('')
   const [isBalanceLoading, setIsBalanceLoading] = useState(false)
   const [balanceError, setBalanceError] = useState('')
+  const uiLanguage = normalizeLanguage(settings.uiLanguage)
 
   const inboxState = useInboxState({
     pollIntervalMinutes: settings.pollIntervalMinutes,
@@ -95,7 +97,9 @@ function App() {
   }
 
   const renderPage = () => {
-    if (activeTab === 'inbox') return <InboxPage inboxState={inboxState} onSendSMSContact={openSMSForContact} />
+    if (activeTab === 'inbox') {
+      return <InboxPage inboxState={inboxState} onSendSMSContact={openSMSForContact} language={uiLanguage} />
+    }
     if (activeTab === 'sms') {
       return (
         <SmsPage
@@ -104,6 +108,7 @@ function App() {
           prefillRecipient={smsPrefill.recipient}
           prefillLabel={smsPrefill.label}
           prefillToken={smsPrefill.token}
+          language={uiLanguage}
         />
       )
     }
@@ -137,12 +142,13 @@ function App() {
               setSettingsLoading(false)
             }
           }}
+          language={uiLanguage}
         />
       )
     }
-    if (activeTab === 'address-book') return <AddressBookPage onSendSMSContact={openSMSForContact} />
-    if (activeTab === 'help') return <HelpPage />
-    return <InboxPage inboxState={inboxState} onSendSMSContact={openSMSForContact} />
+    if (activeTab === 'address-book') return <AddressBookPage onSendSMSContact={openSMSForContact} language={uiLanguage} />
+    if (activeTab === 'help') return <HelpPage language={uiLanguage} />
+    return <InboxPage inboxState={inboxState} onSendSMSContact={openSMSForContact} language={uiLanguage} />
   }
 
   return (
@@ -157,6 +163,7 @@ function App() {
         balanceLabel={balanceLabel}
         isBalanceLoading={isBalanceLoading}
         balanceError={balanceError}
+        language={uiLanguage}
       />
 
       <main className="main-content">{renderPage()}</main>

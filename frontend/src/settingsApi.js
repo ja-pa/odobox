@@ -1,5 +1,6 @@
 import * as Backend from '../wailsjs/go/main/App'
 import { toError } from './errorUtils'
+import { normalizeLanguage } from './i18n'
 
 const DEFAULT_KEEP_LINE_REGEX = String.raw`^v\d+:\s*.+$`
 const DEFAULT_V1_REGEX = String.raw`(?is)(?:^|\n)\s*v1:\s*(?P<content>.*?)(?=\n\s*v2:\s*|\Z)`
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS = {
   pollIntervalMinutes: '5',
   transcriptVersion: 'v2',
   smsIdentityText: '',
+  uiLanguage: 'en',
   messageCleaner: {
     keepLineRegex: DEFAULT_KEEP_LINE_REGEX,
     versionV1Regex: DEFAULT_V1_REGEX,
@@ -104,6 +106,7 @@ function mapApiToSettings(apiSettings = {}) {
       app.default_transcript_version ?? DEFAULT_SETTINGS.transcriptVersion
     ),
     smsIdentityText: app.sms_identity_text ?? DEFAULT_SETTINGS.smsIdentityText,
+    uiLanguage: normalizeLanguage(app.ui_language ?? DEFAULT_SETTINGS.uiLanguage),
     messageCleaner: {
       keepLineRegex: cleaner.keep_line_regex ?? DEFAULT_SETTINGS.messageCleaner.keepLineRegex,
       versionV1Regex: cleaner.version_v1_regex ?? DEFAULT_SETTINGS.messageCleaner.versionV1Regex,
@@ -145,6 +148,7 @@ function mapSettingsToApi(settings, editableSections = []) {
       poll_interval_minutes: Number.parseInt(settings.pollIntervalMinutes, 10) || 5,
       default_transcript_version: settings.transcriptVersion,
       sms_identity_text: settings.smsIdentityText ?? '',
+      ui_language: normalizeLanguage(settings.uiLanguage ?? 'en'),
     }
   }
 
