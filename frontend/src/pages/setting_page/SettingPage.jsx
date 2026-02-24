@@ -259,7 +259,7 @@ function SettingPage({
             <span>Default SMS identity text</span>
             <input
               type="text"
-              placeholder="e.g. MUDr. Petra Ticha"
+              placeholder="e.g. Reception Desk"
               value={settings.smsIdentityText ?? ''}
               onChange={(event) =>
                 setSettings((prev) => ({
