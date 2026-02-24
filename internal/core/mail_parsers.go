@@ -187,6 +187,19 @@ func isSMSInboundMessage(env MailEnvelope, rawEmail []byte) bool {
 	return looksLikeSMSSender(from) || (strings.Contains(from, "odorik.cz") && (strings.Contains(from, "fax") || strings.Contains(from, "sms")))
 }
 
+func parseDateHeader(value string) *time.Time {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	parsed, err := stdmail.ParseDate(value)
+	if err != nil {
+		return nil
+	}
+	utc := parsed.UTC().Truncate(time.Second)
+	return &utc
+}
+
 func extractSMSSenderPhone(subject, text string) string {
 	candidates := []string{
 		`(?im)\b(?:od|from)\s*:\s*(\+?\d[\d\s]{5,})`,

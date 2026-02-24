@@ -1,6 +1,7 @@
 package core
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"strconv"
@@ -144,4 +145,8 @@ func (b *Backend) LoadHTTPAPIConfig() (HTTPAPIConfig, error) {
 		Port:    port,
 		Token:   token,
 	}, nil
+}
+
+func OpenSQLiteDB(path string) (*sql.DB, error) {
+	return openDB(path)
 }

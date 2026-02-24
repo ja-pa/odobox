@@ -8,7 +8,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	stdmail "net/mail"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -945,18 +944,6 @@ func (b *Backend) getVoicemailAudioDataURL(id int) (string, error) {
 		return "", fmt.Errorf("voicemail or MP3 attachment not found")
 	}
 	return "data:audio/mpeg;base64," + base64.StdEncoding.EncodeToString(audio), nil
-}
-
-func parseDateHeader(value string) *time.Time {
-	if strings.TrimSpace(value) == "" {
-		return nil
-	}
-	parsed, err := stdmail.ParseDate(value)
-	if err != nil {
-		return nil
-	}
-	utc := parsed.UTC().Truncate(time.Second)
-	return &utc
 }
 
 func boolToInt(v bool) int {
