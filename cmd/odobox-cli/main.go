@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	imapadapter "OdorikCentral/internal/adapters/imap"
+	ocradapter "OdorikCentral/internal/adapters/ocr"
 	sqliteadapter "OdorikCentral/internal/adapters/sqlite"
 	"OdorikCentral/internal/core"
 )
@@ -20,6 +21,7 @@ func main() {
 
 	b := core.NewBackendWithDeps("", core.BackendDeps{
 		MailGatewayFactory: imapadapter.NewFactory(),
+		OCRService:         ocradapter.NewService(),
 		SyncStoreFactory:   sqliteadapter.NewFactory(),
 	})
 	var err error

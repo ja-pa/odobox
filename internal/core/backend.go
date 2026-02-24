@@ -23,8 +23,6 @@ import (
 const (
 	defaultDBPath      = "./voicemail.db"
 	defaultCfgPath     = "./config.ini"
-	tesseractBinary    = "/usr/bin/tesseract"
-	pdftoppmBinary     = "/usr/bin/pdftoppm"
 	defaultOCRLanguage = "ces+eng"
 )
 

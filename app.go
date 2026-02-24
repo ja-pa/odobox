@@ -6,6 +6,7 @@ import (
 
 	"OdorikCentral/internal/adapters/httpapi"
 	imapadapter "OdorikCentral/internal/adapters/imap"
+	ocradapter "OdorikCentral/internal/adapters/ocr"
 	sqliteadapter "OdorikCentral/internal/adapters/sqlite"
 	"OdorikCentral/internal/core"
 )
@@ -43,6 +44,7 @@ type App struct {
 func NewApp() *App {
 	b := core.NewBackendWithDeps("", core.BackendDeps{
 		MailGatewayFactory: imapadapter.NewFactory(),
+		OCRService:         ocradapter.NewService(),
 		SyncStoreFactory:   sqliteadapter.NewFactory(),
 	})
 	return &App{

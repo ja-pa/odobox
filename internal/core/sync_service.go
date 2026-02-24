@@ -6,12 +6,6 @@ import (
 	"time"
 )
 
-type defaultOCRService struct{}
-
-func (defaultOCRService) ExtractPDFText(pdfData []byte, lang string) (string, error) {
-	return ocrPDFData(pdfData, lang)
-}
-
 func (b *Backend) sync(days int) (SyncResponse, error) {
 	if days < 1 {
 		return SyncResponse{}, fmt.Errorf("days must be a positive integer")
@@ -31,9 +25,8 @@ func (b *Backend) sync(days int) (SyncResponse, error) {
 	if b.syncStoreFactory == nil {
 		return SyncResponse{}, fmt.Errorf("sync store not configured")
 	}
-	ocr := b.ocrService
-	if ocr == nil {
-		ocr = defaultOCRService{}
+	if b.ocrService == nil {
+		return SyncResponse{}, fmt.Errorf("ocr service not configured")
 	}
 
 	gateway, err := b.mailGatewayFactory.Open(
@@ -59,7 +52,7 @@ func (b *Backend) sync(days int) (SyncResponse, error) {
 	if err != nil {
 		return SyncResponse{}, err
 	}
-	smsStored, smsSkipped, err := syncSMSInbox(gateway, store, ocr, days)
+	smsStored, smsSkipped, err := syncSMSInbox(gateway, store, b.ocrService, days)
 	if err != nil {
 		return SyncResponse{}, err
 	}
