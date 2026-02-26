@@ -4,6 +4,7 @@ import AddressBookPage from './pages/address_book_page/AddressBookPage'
 import HelpPage from './pages/help_page/HelpPage'
 import InboxPage from './pages/inbox_page/InboxPage'
 import SmsPage from './pages/sms_page/SmsPage'
+import SmsHistoryPage from './pages/sms_history_page/SmsHistoryPage'
 import useInboxState from './pages/inbox_page/useInboxState'
 import SettingPage from './pages/setting_page/SettingPage'
 import { DEFAULT_SETTINGS, fetchSettingsFromApi, saveSettingsToApi } from './settingsApi'
@@ -88,7 +89,7 @@ function App() {
       label,
       token: Date.now(),
     })
-    setActiveTab('sms')
+    setActiveTab('sms-compose')
   }
 
   const handleResync = async () => {
@@ -100,7 +101,7 @@ function App() {
     if (activeTab === 'inbox') {
       return <InboxPage inboxState={inboxState} onSendSMSContact={openSMSForContact} language={uiLanguage} />
     }
-    if (activeTab === 'sms') {
+    if (activeTab === 'sms' || activeTab === 'sms-compose') {
       return (
         <SmsPage
           defaultSenderId={settings.odorik.senderId}
@@ -111,6 +112,9 @@ function App() {
           language={uiLanguage}
         />
       )
+    }
+    if (activeTab === 'sms-history') {
+      return <SmsHistoryPage language={uiLanguage} />
     }
     if (activeTab === 'settings') {
       return (

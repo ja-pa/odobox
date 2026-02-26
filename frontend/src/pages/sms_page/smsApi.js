@@ -68,3 +68,11 @@ export async function deleteSMSTemplate(id) {
     throw toError(error, 'Failed to delete template')
   }
 }
+
+export async function listSMSHistory({ days = 30 } = {}) {
+  try {
+    return await Backend.ListSMSHistory({ days })
+  } catch (error) {
+    throw toError(error, 'Failed to load SMS history')
+  }
+}

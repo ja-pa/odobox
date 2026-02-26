@@ -136,6 +136,80 @@ export namespace core {
 	        this.processed = source["processed"];
 	    }
 	}
+	export class ListSMSHistoryRequest {
+	    days: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ListSMSHistoryRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.days = source["days"];
+	    }
+	}
+	export class SMSHistoryItem {
+	    id: number;
+	    direction: string;
+	    occurred_at: string;
+	    counterparty: string;
+	    message_text: string;
+	    subject: string;
+	    sender_id: string;
+	    success: boolean;
+	    provider_response: string;
+	    error_message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SMSHistoryItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.direction = source["direction"];
+	        this.occurred_at = source["occurred_at"];
+	        this.counterparty = source["counterparty"];
+	        this.message_text = source["message_text"];
+	        this.subject = source["subject"];
+	        this.sender_id = source["sender_id"];
+	        this.success = source["success"];
+	        this.provider_response = source["provider_response"];
+	        this.error_message = source["error_message"];
+	    }
+	}
+	export class ListSMSHistoryResponse {
+	    items: SMSHistoryItem[];
+	    count: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ListSMSHistoryResponse(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.items = this.convertValues(source["items"], SMSHistoryItem);
+	        this.count = source["count"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class ListSMSMessagesRequest {
 	    days: number;
 	    checked: string;
@@ -378,6 +452,7 @@ export namespace core {
 	        this.settings = source["settings"];
 	    }
 	}
+	
 	
 	export class SMSTemplate {
 	    id: number;

@@ -36,6 +36,10 @@ func (b *Backend) SetSMSMessageChecked(id int, checked bool) (UpdateCheckedRespo
 	return b.updateSMSChecked(id, checked)
 }
 
+func (b *Backend) ListSMSHistory(req ListSMSHistoryRequest) (ListSMSHistoryResponse, error) {
+	return b.listSMSHistory(req)
+}
+
 func (b *Backend) GetVoicemailAudioDataURL(id int) (string, error) {
 	return b.getVoicemailAudioDataURL(id)
 }

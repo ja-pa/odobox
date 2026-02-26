@@ -26,6 +26,24 @@
   gap: 0.5rem;
 }
 
+.nav-group {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.nav-submenu {
+  display: grid;
+  gap: 0.25rem;
+  padding-left: 1.05rem;
+}
+
+.nav-sub-button {
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+}
+
 .nav-button {
   background: transparent;
   border: 1px solid transparent;
@@ -788,6 +806,78 @@
   background: #f6f8fc;
 }
 
+.sms-history-controls {
+  margin-top: 1rem;
+  display: flex;
+  align-items: end;
+  gap: 0.7rem;
+}
+
+.sms-history-days {
+  width: 130px;
+}
+
+.sms-history-list {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.sms-history-card {
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: #ffffff;
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.sms-history-meta {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.sms-history-counterparty {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.sms-history-counterparty-name {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.sms-history-counterparty-phone {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.sms-history-status {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.sms-history-status.sent {
+  color: #067647;
+}
+
+.sms-history-status.failed {
+  color: #b42318;
+}
+
+.sms-history-message {
+  margin: 0;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
 @media (max-width: 1020px) {
   .app-shell {
     min-width: 0;
@@ -801,6 +891,12 @@
 
   .nav-list {
     flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .nav-submenu {
+    display: flex;
+    padding-left: 0;
   }
 
   .message-card {
@@ -820,6 +916,11 @@
   }
 
   .settings-actions {
+    flex-wrap: wrap;
+  }
+
+  .sms-history-controls {
+    align-items: center;
     flex-wrap: wrap;
   }
 }

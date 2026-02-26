@@ -22,6 +22,8 @@ export function ImportVCF(arg1:core.ImportVCFRequest):Promise<core.ImportVCFResp
 
 export function ListContacts():Promise<Array<core.ContactInfo>>;
 
+export function ListSMSHistory(arg1:core.ListSMSHistoryRequest):Promise<core.ListSMSHistoryResponse>;
+
 export function ListSMSMessages(arg1:core.ListSMSMessagesRequest):Promise<core.ListSMSMessagesResponse>;
 
 export function ListSMSTemplates():Promise<Array<core.SMSTemplate>>;

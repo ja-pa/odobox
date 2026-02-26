@@ -17,6 +17,8 @@ type SyncResponse = core.SyncResponse
 type UpdateCheckedResponse = core.UpdateCheckedResponse
 type ListSMSMessagesRequest = core.ListSMSMessagesRequest
 type ListSMSMessagesResponse = core.ListSMSMessagesResponse
+type ListSMSHistoryRequest = core.ListSMSHistoryRequest
+type ListSMSHistoryResponse = core.ListSMSHistoryResponse
 type SettingsResponse = core.SettingsResponse
 type PatchSettingsRequest = core.PatchSettingsRequest
 type PatchSettingsResponse = core.PatchSettingsResponse
@@ -84,6 +86,10 @@ func (a *App) ListSMSMessages(req ListSMSMessagesRequest) (ListSMSMessagesRespon
 
 func (a *App) SetSMSMessageChecked(id int, checked bool) (UpdateCheckedResponse, error) {
 	return a.backend.SetSMSMessageChecked(id, checked)
+}
+
+func (a *App) ListSMSHistory(req ListSMSHistoryRequest) (ListSMSHistoryResponse, error) {
+	return a.backend.ListSMSHistory(req)
 }
 
 func (a *App) GetVoicemailAudioDataURL(id int) (string, error) {

@@ -2,17 +2,11 @@ import { useState } from 'react'
 import { getErrorMessage } from '../../errorUtils'
 import { updateContact } from '../address_book_page/addressBookApi'
 import { t } from '../../i18n'
+import MessageTimeFilter from '../../components/MessageTimeFilter'
 import CheckedItemsSection from './components/CheckedItemsSection'
 import ContactModal from './components/ContactModal'
 import MessageList from './components/MessageList'
 import { MESSAGE_TIME_FILTERS } from './useInboxState'
-
-const FILTER_LABELS = {
-  today: 'Today',
-  week: 'Week',
-  month: 'Month',
-  all: 'All time',
-}
 
 function InboxPage({ inboxState, onSendSMSContact, language = 'en' }) {
   const {
@@ -102,20 +96,12 @@ function InboxPage({ inboxState, onSendSMSContact, language = 'en' }) {
           {showCheckedItems ? t(language, 'inbox_hide_checked') : t(language, 'inbox_show_checked')}
           {totalChecked > 0 ? ` (${totalChecked})` : ''}
         </button>
-        <div className="time-filter-list" role="tablist" aria-label="Message time filter">
-          {MESSAGE_TIME_FILTERS.map((filterKey) => (
-            <button
-              key={filterKey}
-              type="button"
-              role="tab"
-              aria-selected={timeFilter === filterKey}
-              className={`time-filter-pill ${timeFilter === filterKey ? 'active' : ''}`}
-              onClick={() => setTimeFilter(filterKey)}
-            >
-              {FILTER_LABELS[filterKey]}
-            </button>
-          ))}
-        </div>
+        <MessageTimeFilter
+          value={timeFilter}
+          onChange={setTimeFilter}
+          filters={MESSAGE_TIME_FILTERS}
+          language={language}
+        />
       </header>
 
       {isLoading ? (

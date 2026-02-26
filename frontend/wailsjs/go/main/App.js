@@ -42,6 +42,10 @@ export function ListContacts() {
   return window['go']['main']['App']['ListContacts']();
 }
 
+export function ListSMSHistory(arg1) {
+  return window['go']['main']['App']['ListSMSHistory'](arg1);
+}
+
 export function ListSMSMessages(arg1) {
   return window['go']['main']['App']['ListSMSMessages'](arg1);
 }

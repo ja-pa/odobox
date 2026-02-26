@@ -23,6 +23,28 @@ type ListSMSMessagesResponse struct {
 	Count int              `json:"count"`
 }
 
+type ListSMSHistoryRequest struct {
+	Days int `json:"days"`
+}
+
+type SMSHistoryItem struct {
+	ID               int    `json:"id"`
+	Direction        string `json:"direction"`
+	OccurredAt       string `json:"occurred_at"`
+	Counterparty     string `json:"counterparty"`
+	MessageText      string `json:"message_text"`
+	Subject          string `json:"subject"`
+	SenderID         string `json:"sender_id"`
+	Success          bool   `json:"success"`
+	ProviderResponse string `json:"provider_response"`
+	ErrorMessage     string `json:"error_message"`
+}
+
+type ListSMSHistoryResponse struct {
+	Items []SMSHistoryItem `json:"items"`
+	Count int              `json:"count"`
+}
+
 type SendSMSRequest struct {
 	Recipient string `json:"recipient"`
 	Message   string `json:"message"`
