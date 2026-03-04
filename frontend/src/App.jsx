@@ -5,6 +5,7 @@ import HelpPage from './pages/help_page/HelpPage'
 import InboxPage from './pages/inbox_page/InboxPage'
 import SmsPage from './pages/sms_page/SmsPage'
 import SmsHistoryPage from './pages/sms_history_page/SmsHistoryPage'
+import SmsTemplatePage from './pages/sms_template_page/SmsTemplatePage'
 import useInboxState from './pages/inbox_page/useInboxState'
 import SettingPage from './pages/setting_page/SettingPage'
 import { DEFAULT_SETTINGS, fetchSettingsFromApi, saveSettingsToApi } from './settingsApi'
@@ -115,6 +116,9 @@ function App() {
     }
     if (activeTab === 'sms-history') {
       return <SmsHistoryPage language={uiLanguage} />
+    }
+    if (activeTab === 'sms-template') {
+      return <SmsTemplatePage language={uiLanguage} />
     }
     if (activeTab === 'settings') {
       return (

@@ -19,7 +19,8 @@ function Sidebar({
   language = 'en',
 }) {
   const [nowTs, setNowTs] = useState(() => Date.now())
-  const isSMSSectionActive = activeTab === 'sms' || activeTab === 'sms-compose' || activeTab === 'sms-history'
+  const isSMSSectionActive =
+    activeTab === 'sms' || activeTab === 'sms-compose' || activeTab === 'sms-history' || activeTab === 'sms-template'
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -64,6 +65,13 @@ function Sidebar({
               onClick={() => onTabChange('sms-history')}
             >
               {t(language, 'sidebar_sms_history')}
+            </button>
+            <button
+              type="button"
+              className={`nav-button nav-sub-button ${activeTab === 'sms-template' ? 'active' : ''}`}
+              onClick={() => onTabChange('sms-template')}
+            >
+              {t(language, 'sidebar_sms_template')}
             </button>
           </div>
         </div>

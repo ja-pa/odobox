@@ -14,9 +14,16 @@ function normalizeDate(dateValue) {
   return dateValue.replace(' ', 'T')
 }
 
-function formatDate(dateValue) {
+function formatDate(dateValue, language) {
   const date = new Date(normalizeDate(dateValue))
-  return date.toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const locale = language === 'cs' ? 'cs-CZ' : 'en-US'
+  return date.toLocaleString(locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 function normalizePhoneLoose(raw) {
@@ -43,11 +50,11 @@ function SmsHistoryPage({ language = 'en' }) {
       const payload = await listSMSHistory({ days })
       setItems(payload.items ?? [])
     } catch (error) {
-      setErrorMessage(getErrorMessage(error, 'Failed to load SMS history'))
+      setErrorMessage(getErrorMessage(error, t(language, 'sms_history_error_load')))
     } finally {
       setLoading(false)
     }
-  }, [timeFilter])
+  }, [language, timeFilter])
 
   useEffect(() => {
     loadHistory()
@@ -113,7 +120,7 @@ function SmsHistoryPage({ language = 'en' }) {
               >
                 <div className="sms-history-meta">
                   <strong>{isSent ? t(language, 'sms_history_direction_sent') : t(language, 'sms_history_direction_received')}</strong>
-                  <span>{formatDate(item.occurred_at)}</span>
+                  <span>{formatDate(item.occurred_at, language)}</span>
                 </div>
                 {isSent ? (
                   <p className={`sms-history-status ${isFailedSent ? 'failed' : 'sent'}`}>

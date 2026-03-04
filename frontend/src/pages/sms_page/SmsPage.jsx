@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  createSMSTemplate,
-  deleteSMSTemplate,
   getSMSLengthInfo,
   listSMSTemplates,
   sendSMS,
-  updateSMSTemplate,
 } from './smsApi'
 import { listContacts } from '../address_book_page/addressBookApi'
 import { t } from '../../i18n'
@@ -39,12 +36,6 @@ function SmsPage({
 
   const [templates, setTemplates] = useState([])
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
-  const [templateName, setTemplateName] = useState('')
-  const [templateBody, setTemplateBody] = useState('')
-  const [isSavingTemplate, setIsSavingTemplate] = useState(false)
-  const [templateMessage, setTemplateMessage] = useState('')
-  const [templateErrorMessage, setTemplateErrorMessage] = useState('')
-  const [showTemplateManager, setShowTemplateManager] = useState(false)
 
   const effectiveMessage = useMemo(
     () => composeMessageWithIdentity(defaultIdentityText, message),
@@ -92,12 +83,6 @@ function SmsPage({
     setContactQuery(prefillLabel ? `${prefillLabel} (${prefillRecipient})` : prefillRecipient)
   }, [prefillLabel, prefillRecipient, prefillToken])
 
-  const clearTemplateForm = () => {
-    setSelectedTemplateId('')
-    setTemplateName('')
-    setTemplateBody('')
-  }
-
   const applyTemplateToMessage = (templateId) => {
     if (!templateId) return
     const found = templates.find((item) => String(item.id) === String(templateId))
@@ -108,73 +93,10 @@ function SmsPage({
   const onTemplatePick = (value) => {
     setSelectedTemplateId(value)
     if (!value) {
-      setTemplateName('')
-      setTemplateBody('')
-      setTemplateMessage('')
       setMessage('')
       return
     }
-    const found = templates.find((item) => String(item.id) === String(value))
-    if (!found) return
-    setTemplateName(found.name || '')
-    setTemplateBody(found.body || '')
     applyTemplateToMessage(value)
-  }
-
-  const onSaveTemplate = async () => {
-    setTemplateMessage('')
-    setTemplateErrorMessage('')
-    setErrorMessage('')
-    if (!templateName.trim()) {
-      setTemplateErrorMessage('Template name is required.')
-      return
-    }
-    if (!templateBody.trim()) {
-      setTemplateErrorMessage('Template body is required.')
-      return
-    }
-
-    setIsSavingTemplate(true)
-    try {
-      if (selectedTemplateId) {
-        const updated = await updateSMSTemplate({
-          id: Number(selectedTemplateId),
-          name: templateName,
-          body: templateBody,
-        })
-        setTemplateMessage(`Template '${updated.name}' updated.`)
-      } else {
-        const created = await createSMSTemplate({ name: templateName, body: templateBody })
-        setTemplateMessage(`Template '${created.name}' created.`)
-        setSelectedTemplateId(String(created.id))
-      }
-      await loadTemplates()
-    } catch (error) {
-      setTemplateErrorMessage(error.message)
-    } finally {
-      setIsSavingTemplate(false)
-    }
-  }
-
-  const onDeleteTemplate = async () => {
-    if (!selectedTemplateId) {
-      setErrorMessage('Select a template to delete.')
-      return
-    }
-    setIsSavingTemplate(true)
-    setTemplateMessage('')
-    setTemplateErrorMessage('')
-    setErrorMessage('')
-    try {
-      await deleteSMSTemplate(Number(selectedTemplateId))
-      await loadTemplates()
-      clearTemplateForm()
-      setTemplateMessage('Template deleted.')
-    } catch (error) {
-      setTemplateErrorMessage(error.message)
-    } finally {
-      setIsSavingTemplate(false)
-    }
   }
 
   const onSubmit = async (event) => {
@@ -183,16 +105,16 @@ function SmsPage({
     setStatusMessage('')
 
     if (!recipient.trim()) {
-      setErrorMessage('Recipient is required.')
+      setErrorMessage(t(language, 'sms_error_recipient_required'))
       return
     }
     if (!message.trim()) {
-      setErrorMessage('Message is required.')
+      setErrorMessage(t(language, 'sms_error_message_required'))
       return
     }
     if (!smsInfo.single) {
       setErrorMessage(
-        `Message is too long for one SMS (${smsInfo.encoding} ${smsInfo.used}/${smsInfo.max}). Shorten it.`
+        t(language, 'sms_error_too_long', { encoding: smsInfo.encoding, used: smsInfo.used, max: smsInfo.max })
       )
       return
     }
@@ -201,7 +123,12 @@ function SmsPage({
     try {
       const result = await sendSMS({ recipient, message, sender })
       setStatusMessage(
-        `SMS sent to ${result.recipient} (${result.encoding} ${result.chars_used}/${result.max_single_chars}).`
+        t(language, 'sms_status_sent', {
+          recipient: result.recipient,
+          encoding: result.encoding,
+          used: result.chars_used,
+          max: result.max_single_chars,
+        })
       )
       setMessage('')
     } catch (error) {
@@ -235,16 +162,16 @@ function SmsPage({
 
       <form className="settings-layout" onSubmit={onSubmit}>
         <section className="settings-card">
-          <h3>SMS Form</h3>
+          <h3>{t(language, 'sms_form_title')}</h3>
 
           <label className="form-field">
-            <span>Template (optional)</span>
+            <span>{t(language, 'sms_template_optional')}</span>
             <select
               value={selectedTemplateId}
               onChange={(event) => onTemplatePick(event.target.value)}
               disabled={isSending}
             >
-              <option value="">No template</option>
+              <option value="">{t(language, 'sms_no_template')}</option>
               {templates.map((template) => (
                 <option key={template.id} value={template.id}>
                   {template.name}
@@ -255,7 +182,7 @@ function SmsPage({
 
           <div className="settings-grid">
             <label className="form-field">
-              <span>Recipient number</span>
+              <span>{t(language, 'sms_recipient_label')}</span>
               <input
                 type="text"
                 placeholder="+420123456789"
@@ -269,10 +196,10 @@ function SmsPage({
               />
             </label>
             <label className="form-field">
-              <span>Sender (your number/id, optional)</span>
+              <span>{t(language, 'sms_sender_label')}</span>
               <input
                 type="text"
-                placeholder="Leave empty to use default sender from settings"
+                placeholder={t(language, 'sms_sender_placeholder')}
                 value={sender}
                 onChange={(event) => setSender(event.target.value)}
                 disabled={isSending}
@@ -282,10 +209,10 @@ function SmsPage({
 
           <div className="contact-picker">
             <label className="form-field">
-              <span>Find recipient in address book</span>
+              <span>{t(language, 'sms_find_recipient')}</span>
               <input
                 type="text"
-                placeholder="Search by name, phone, email, company"
+                placeholder={t(language, 'sms_find_recipient_placeholder')}
                 value={contactQuery}
                 onFocus={() => setShowContactPicker(true)}
                 onChange={(event) => {
@@ -299,9 +226,9 @@ function SmsPage({
 
             {selectedRecipientContactId ? (
               <div className="contact-picker-selected">
-                <span>Contact selected</span>
+                <span>{t(language, 'sms_contact_selected')}</span>
                 <button type="button" className="action-secondary" onClick={clearPickedContact} disabled={isSending}>
-                  Clear
+                  {t(language, 'sms_clear_contact')}
                 </button>
               </div>
             ) : null}
@@ -309,7 +236,7 @@ function SmsPage({
             {showContactPicker ? (
               <div className="contact-picker-list">
                 {filteredContacts.length === 0 ? (
-                  <div className="contact-picker-empty">No matching contacts.</div>
+                  <div className="contact-picker-empty">{t(language, 'sms_no_matching_contacts')}</div>
                 ) : (
                   filteredContacts.map((contact) => (
                     <button
@@ -321,7 +248,7 @@ function SmsPage({
                       onClick={() => onContactPick(String(contact.id))}
                       disabled={isSending}
                     >
-                      <strong>{contact.full_name || 'Unnamed contact'}</strong>
+                      <strong>{contact.full_name || t(language, 'sms_unnamed_contact')}</strong>
                       <span>{contact.phone || '-'}</span>
                       {contact.org ? <span>{contact.org}</span> : null}
                     </button>
@@ -332,108 +259,30 @@ function SmsPage({
           </div>
 
           <label className="form-field">
-            <span>Message</span>
+            <span>{t(language, 'sms_message_label')}</span>
             <textarea
               rows={6}
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               disabled={isSending}
-              placeholder="Write SMS text here"
+              placeholder={t(language, 'sms_message_placeholder')}
             />
           </label>
           {defaultIdentityText ? (
             <p className="sms-limit">
-              Prefix applied automatically: <strong>{defaultIdentityText}:</strong>
+              {t(language, 'sms_prefix_applied')} <strong>{defaultIdentityText}:</strong>
             </p>
           ) : null}
 
           <p className={`sms-limit ${smsInfo.single ? '' : 'sms-limit-error'}`}>
-            {smsInfo.encoding} {smsInfo.used}/{smsInfo.max} (single SMS required)
+            {t(language, 'sms_limit_single', { encoding: smsInfo.encoding, used: smsInfo.used, max: smsInfo.max })}
           </p>
 
-          <button
-            type="button"
-            className="template-toggle"
-            onClick={() => setShowTemplateManager((prev) => !prev)}
-          >
-            {showTemplateManager ? 'Hide template manager' : 'Manage templates'}
-          </button>
-
-          {showTemplateManager ? (
-            <>
-              <h3>Template Manager</h3>
-              <p className="template-hint">Create, edit or delete templates.</p>
-
-              <div className="settings-grid">
-                <label className="form-field">
-                  <span>Template to edit</span>
-                  <select
-                    value={selectedTemplateId}
-                    onChange={(event) => onTemplatePick(event.target.value)}
-                    disabled={isSavingTemplate}
-                  >
-                    <option value="">Create new template</option>
-                    {templates.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <label className="form-field">
-                <span>Template name</span>
-                <input
-                  type="text"
-                  value={templateName}
-                  onChange={(event) => setTemplateName(event.target.value)}
-                  disabled={isSavingTemplate}
-                  placeholder="e.g. Call back reminder"
-                />
-              </label>
-
-              <label className="form-field">
-                <span>Template body</span>
-                <textarea
-                  rows={5}
-                  value={templateBody}
-                  onChange={(event) => setTemplateBody(event.target.value)}
-                  disabled={isSavingTemplate}
-                  placeholder="Template text"
-                />
-              </label>
-
-              <div className="settings-actions">
-                <button type="button" className="action-primary" onClick={onSaveTemplate} disabled={isSavingTemplate}>
-                  {isSavingTemplate ? 'Saving...' : selectedTemplateId ? 'Update template' : 'Save template'}
-                </button>
-                <button
-                  type="button"
-                  className="action-secondary"
-                  onClick={onDeleteTemplate}
-                  disabled={isSavingTemplate || !selectedTemplateId}
-                >
-                  Delete template
-                </button>
-                <button
-                  type="button"
-                  className="action-secondary"
-                  onClick={clearTemplateForm}
-                  disabled={isSavingTemplate}
-                >
-                  New
-                </button>
-                {templateMessage ? <span className="save-message">{templateMessage}</span> : null}
-                {templateErrorMessage ? <span className="save-message template-error">{templateErrorMessage}</span> : null}
-              </div>
-            </>
-          ) : null}
         </section>
 
         <div className="settings-actions">
           <button type="submit" className="action-primary" disabled={isSending || !message.trim()}>
-            {isSending ? 'Sending...' : 'Send SMS'}
+            {isSending ? t(language, 'sms_sending') : t(language, 'sms_send_button')}
           </button>
           {statusMessage ? <span className="save-message">{statusMessage}</span> : null}
           {errorMessage ? <span className="save-message">{errorMessage}</span> : null}
