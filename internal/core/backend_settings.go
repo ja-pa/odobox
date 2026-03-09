@@ -45,7 +45,7 @@ func (b *Backend) getSettings() (SettingsResponse, error) {
 		"message_cleaner": {
 			"keep_line_regex":      cfg.get("message_cleaner", "keep_line_regex", `^v\d+:\s*.+$`),
 			"version_v1_regex":     cfg.get("message_cleaner", "version_v1_regex", `(?is)(?:^|\n)\s*v1:\s*(?P<content>.*?)(?=\n\s*v2:\s*|\Z)`),
-			"version_v2_regex":     cfg.get("message_cleaner", "version_v2_regex", `(?is)(?:^|\n)\s*v2:\s*(?P<content>.*?)(?=\n\s*v1:\s*|\Z)`),
+			"version_v2_regex":     cfg.get("message_cleaner", "version_v2_regex", `(?is)(?:^|\n)(?:\s*v2:\s*|---\s*Přepis hlasové zprávy\s*\(google_v2\)\s*---\s*)(?P<content>.*?)(?:\n\s*v1:\s*|\nVíce informací o přepisu nahrávky na text:|$)`),
 			"remove_regexes":       cfg.get("message_cleaner", "remove_regexes", ""),
 			"collapse_blank_lines": cfg.get("message_cleaner", "collapse_blank_lines", "true"),
 		},

@@ -4,7 +4,7 @@ import { normalizeLanguage } from './i18n'
 
 const DEFAULT_KEEP_LINE_REGEX = String.raw`^v\d+:\s*.+$`
 const DEFAULT_V1_REGEX = String.raw`(?is)(?:^|\n)\s*v1:\s*(?P<content>.*?)(?=\n\s*v2:\s*|\Z)`
-const DEFAULT_V2_REGEX = String.raw`(?is)(?:^|\n)\s*v2:\s*(?P<content>.*?)(?=\n\s*v1:\s*|\Z)`
+const DEFAULT_V2_REGEX = String.raw`(?is)(?:^|\n)(?:\s*v2:\s*|---\s*Přepis hlasové zprávy\s*\(google_v2\)\s*---\s*)(?P<content>.*?)(?:\n\s*v1:\s*|\nVíce informací o přepisu nahrávky na text:|$)`
 const DEFAULT_CALLER_REGEX = String.raw`^Hlasova zprava\s+(\+?\d+)\s+[-=]+>\s+\d+`
 const DEFAULT_SMS_TEXT_REGEX = String.raw`(?is)TEXT:\s*["“]?(?:Message)?(?P<content>[^"\r\n]+?)["”]`
 

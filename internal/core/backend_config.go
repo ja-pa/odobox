@@ -228,7 +228,7 @@ func (b *Backend) loadCleanerConfig(cfg *appConfig) (cleanerConfig, error) {
 		KeepLineRegex:      cfg.get("message_cleaner", "keep_line_regex", `^v\d+:\s*.+$`),
 		CollapseBlankLines: parseBoolLoose(cfg.get("message_cleaner", "collapse_blank_lines", "true"), true),
 		VersionV1Regex:     cfg.get("message_cleaner", "version_v1_regex", `(?is)(?:^|\n)\s*v1:\s*(?P<content>.*?)(?=\n\s*v2:\s*|\Z)`),
-		VersionV2Regex:     cfg.get("message_cleaner", "version_v2_regex", `(?is)(?:^|\n)\s*v2:\s*(?P<content>.*?)(?=\n\s*v1:\s*|\Z)`),
+		VersionV2Regex:     cfg.get("message_cleaner", "version_v2_regex", `(?is)(?:^|\n)(?:\s*v2:\s*|---\s*Přepis hlasové zprávy\s*\(google_v2\)\s*---\s*)(?P<content>.*?)(?:\n\s*v1:\s*|\nVíce informací o přepisu nahrávky na text:|$)`),
 	}
 	removeRaw := cfg.get("message_cleaner", "remove_regexes", "")
 	for _, line := range strings.Split(removeRaw, "\n") {

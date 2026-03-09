@@ -35,7 +35,7 @@ remove_regexes =
     ^Více informací o přepisu nahrávky na text:$
     ^https?://\S+$
 version_v1_regex = (?is)(?:^|\n)\s*v1:\s*(?P<content>.*?)(?=\n\s*v2:\s*|\Z)
-version_v2_regex = (?is)(?:^|\n)\s*v2:\s*(?P<content>.*?)(?=\n\s*v1:\s*|\Z)
+version_v2_regex = (?is)(?:^|\n)(?:\s*v2:\s*|---\s*Přepis hlasové zprávy\s*\(google_v2\)\s*---\s*)(?P<content>.*?)(?:\n\s*v1:\s*|\nVíce informací o přepisu nahrávky na text:|$)
 
 [odorik]
 account_id =
