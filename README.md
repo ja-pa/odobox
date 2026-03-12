@@ -69,6 +69,7 @@ make cli
 make cli-run ARGS="help"
 make ocr
 make ocr-test
+make demo-db
 make release
 ```
 
@@ -90,6 +91,19 @@ Frontend only:
 
 ```bash
 make dev-frontend
+```
+
+Demo database:
+
+```bash
+make demo-db
+ODORIK_CONFIG=demo/config.ini make dev
+```
+
+Single command:
+
+```bash
+make demo-db && ODORIK_CONFIG=demo/config.ini make dev
 ```
 
 ## 5. HTTP Debug API (Optional)

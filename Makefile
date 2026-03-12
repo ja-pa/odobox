@@ -9,7 +9,7 @@ CONFIG_FILE ?= config.ini
 CONFIG_EXAMPLE ?= config.ini.example
 OCR_TEST_INPUT ?= ./sample-input.pdf
 
-.PHONY: help deps bindings dev dev-browser dev-frontend backend-check backend-test frontend-build release release-ci cli cli-run ocr ocr-test config-example clean
+.PHONY: help deps bindings dev dev-browser dev-frontend backend-check backend-test frontend-build release release-ci cli cli-run ocr ocr-test config-example demo-db clean
 
 help:
 	@echo "Targets:"
@@ -28,6 +28,7 @@ help:
 	@echo "  make ocr            - Build odobox-ocr utility"
 	@echo "  make ocr-test       - Run odobox-ocr on OCR_TEST_INPUT=$(OCR_TEST_INPUT)"
 	@echo "  make config-example - Generate sanitized config.ini.example"
+	@echo "  make demo-db        - Generate demo SQLite database and demo config"
 	@echo "  make clean          - Remove frontend dist artifacts"
 
 deps:
@@ -118,6 +119,13 @@ config-example:
 		{ next } \
 	' "$(CONFIG_FILE)" > "$(CONFIG_EXAMPLE)"
 	@echo "Generated $(CONFIG_EXAMPLE)"
+
+demo-db:
+	@mkdir -p demo
+	rm -f demo/demo.db demo/demo.db-journal
+	printf '.read demo/demo.sql\n.quit\n' | sqlite3 demo/demo.db
+	rm -f demo/demo.db-journal
+	@echo "Generated demo/demo.db and demo/config.ini"
 
 clean:
 	rm -rf $(FRONTEND_DIR)/dist
